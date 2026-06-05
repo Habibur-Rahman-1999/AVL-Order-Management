@@ -146,12 +146,11 @@ document.getElementById('btnVerifyResetOtp').addEventListener('click', () => {
     }, 800);
 });
 
-// ---------------- SAVE NEW PASSWORD LOGIC (MERGED) ----------------
+// ---------------- SAVE NEW PASSWORD (UPDATED: via Apps Script to Firebase Auth) ----------------
 document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
     const newPassword = document.getElementById('newPasswordInput').value;
     const confirmPassword = document.getElementById('confirmPasswordInput').value;
     const defaultBtnHtml = `<i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন`;
-    const user = auth.currentUser;  // Might be null if user hasn't logged in recently
 
     if(!newPassword || !confirmPassword) {
         alert('দয়া করে দুটি ঘরই পূরণ করুন।');
@@ -168,41 +167,33 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
 
     toggleLoading('btnSaveNewPassword', true, defaultBtnHtml);
 
-    // Priority: If user is already authenticated, use Firebase Auth updatePassword
-    if (user) {
-        // User is logged in – this handles "change password" for authenticated users
-        updatePassword(user, newPassword)
-            .then(() => {
-                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-                alert('সফলভাবে পাসওয়ার্ড আপডেট হয়েছে!');
-                document.getElementById('newPasswordInput').value = "";
-                document.getElementById('confirmPasswordInput').value = "";
-                switchView(loginView);
-            })
-            .catch((error) => {
-                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-                alert('পাসওয়ার্ড আপডেট ব্যর্থ: ' + error.message);
-            });
-    } else {
-        // Fallback: Forgot password flow (user not logged in) – save to Realtime Database
-        const emailKey = resetTargetEmail.replace(/[.#$\[\]]/g, "_");
-        set(ref(database, 'password_resets/' + emailKey), {
+    // Apps Script-এ রিকোয়েস্ট পাঠিয়ে Firebase Auth-এ পাসওয়ার্ড আপডেট করা
+    fetch(appsScriptURL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            action: "PASSWORD_RESET_CONFIRM",
             email: resetTargetEmail,
-            updatedPassword: newPassword,
-            updatedAt: new Date().toISOString()
+            otp: resetOTP,
+            new_password: newPassword
         })
-        .then(() => {
-            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-            alert('আপনার নতুন পাসওয়ার্ডটি সফলভাবে সিস্টেমে সংরক্ষিত হয়েছে। অনুগ্রহ করে নতুন পাসওয়ার্ড দিয়ে লগইন করুন!');
-            document.getElementById('newPasswordInput').value = "";
-            document.getElementById('confirmPasswordInput').value = "";
-            switchView(loginView);
-        })
-        .catch(err => {
-            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-            alert('পাসওয়ার্ড সংরক্ষণে সমস্যা হয়েছে: ' + err.message);
-        });
-    }
+    })
+    .then(() => {
+        toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+        alert('আপনার পাসওয়ার্ড সফলভাবে রিসেট হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
+        // Clear fields & state
+        document.getElementById('newPasswordInput').value = "";
+        document.getElementById('confirmPasswordInput').value = "";
+        resetOTP = null;
+        resetTargetEmail = "";
+        switchView(loginView);
+    })
+    .catch(err => {
+        toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+        alert('পাসওয়ার্ড আপডেট করতে সার্ভারে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+        console.error(err);
+    });
 });
 
 // ---------------- SEND REGISTRATION OTP LOGIC ----------------
