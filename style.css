@@ -1,13 +1,189 @@
-body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-    max-width: 500px;
-    margin: auto;
-}
-input, button {
-    display: block;
-    margin: 10px 0;
-    padding: 8px;
-    width: 100%;
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
+    font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    /* Akij Venture vibe-er sathe mil rekhe premium deep blue gradient background */
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Glassmorphism Dynamic Card */
+.login-container {
+    background: rgba(255, 255, 255, 0.95);
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Header UI Elements */
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo-icon {
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #ff9900, #ff5500);
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 26px;
+    margin-bottom: 15px;
+    box-shadow: 0 5px 15px rgba(255, 85, 0, 0.4);
+}
+
+.login-header h2 {
+    color: #1e3c72;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.login-header p {
+    color: #555;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Form Group Layouts */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    color: #333;
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 15px;
+    color: #777;
+    font-size: 15px;
+    transition: color 0.3s ease;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 13px 15px 13px 45px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14.5px;
+    color: #333;
+    outline: none;
+    background-color: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+/* Interactive Input Focus */
+.input-wrapper input:focus {
+    border-color: #2a5298;
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.15);
+}
+
+.input-wrapper input:focus + .input-icon {
+    color: #2a5298;
+}
+
+/* Styled Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #162e58 0%, #1e3c72 100%);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.3);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #0e8076 0%, #2ed870 100%);
+    transform: translateY(-2px);
+}
+
+/* Footer / Forget Password Link */
+.form-footer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.forgot-link {
+    color: #e53e3e;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.forgot-link:hover {
+    color: #c53030;
+    text-decoration: underline;
+}
+
+/* Responsive view optimization */
+@media (max-width: 400px) {
+    .login-container {
+        padding: 30px 20px;
+    }
 }
