@@ -79,34 +79,33 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
 
     // Generate secure 6-digit verification sequence
     generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("Generated Verification OTP Token:", generatedOTP);
 
     document.getElementById('otp-message').innerText = `${email} ঠিকানায় কোড পাঠানো হচ্ছে...`;
     switchView(otpView);
 
-    // OPTION A: EmailJS Production integration (Recommended Client-side system)
-    // EmailJS ড্যাশবোর্ডে অ্যাকাউন্ট খুলে নিচের ID গুলো বসালে সরাসরি ইমেইলে মেইল যাবে।
-    const emailJS_ServiceID = "YOUR_SERVICE_ID"; 
-    const emailJS_TemplateID = "YOUR_TEMPLATE_ID";
-    const emailJS_PublicKey = "YOUR_PUBLIC_KEY";
+    // আপনার দেওয়া লাইভ গুগল অ্যাপস স্ক্রিপ্ট ওয়েব অ্যাপ ইউআরএল
+    const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
 
-    if(emailJS_ServiceID !== "YOUR_SERVICE_ID") {
-        emailjs.init(emailJS_PublicKey);
-        emailjs.send(emailJS_ServiceID, emailJS_TemplateID, {
-            to_name: name,
+    // Safe & Secure API Forwarder Call
+    fetch(appsScriptURL, {
+        method: "POST",
+        mode: "no-cors", 
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
             to_email: email,
+            to_name: name,
             otp_code: generatedOTP
-        }).then(() => {
-            document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
-        }).catch((error) => {
-            alert("EmailJS মেইল পাঠাতে ব্যর্থ হয়েছে। কন্সোলে আপনার ব্রাউজার টোকেন চেক করুন।");
-            console.error(error);
-        });
-    } else {
-        // Fallback System Strategy: EmailJS কনফিগার না করা পর্যন্ত টেস্ট করার সুবিধার্থে এলার্ট স্ক্রিনেই কোডটি পপ-আপ হবে
-        alert(`[টেস্টিং মোড]: আপনার ইমেইল ওটিপি কোড হলো: ${generatedOTP}`);
-        document.getElementById('otp-message').innerText = `[টেস্ট মোড]: ওটিপি কোডটি আপনার স্ক্রিনে এলার্ট হিসেবে শো করা হয়েছে।`;
-    }
+        })
+    })
+    .then(() => {
+        document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
+    })
+    .catch((error) => {
+        alert("গুগল স্ক্রিপ্টের মাধ্যমে মেইল পাঠাতে সমস্যা হয়েছে।");
+        console.error(error);
+    });
 });
 
 // ---------------- VERIFY OTP AND SIGNUP LOGIC ----------------
@@ -133,7 +132,6 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
                 createdAt: new Date().toISOString()
             }).then(() => {
                 alert('অভিনন্দন! আপনার অ্যাকাউন্টটি সফলভাবে ভেরিফাইড এবং রেজিস্টার্ড হয়েছে।');
-                // Clear state fields and revert focus layout back to authentication node entry
                 document.getElementById('otpInput').value = "";
                 switchView(loginView);
             }).catch(dbErr => {
