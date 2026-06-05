@@ -10,7 +10,7 @@
 </head>
 <body>
     <div class="login-container">
-        
+
         <div id="login-view" class="auth-view active">
             <div class="login-header">
                 <div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div>
@@ -30,6 +30,7 @@
                     <div class="input-wrapper">
                         <i class="fas fa-lock input-icon"></i>
                         <input type="password" id="loginPassword" placeholder="••••••••" required>
+                        <i class="fas fa-eye toggle-icon" onclick="togglePass('loginPassword')"></i>
                     </div>
                 </div>
                 <div class="action-buttons">
@@ -96,6 +97,7 @@
                     <div class="input-wrapper">
                         <i class="fas fa-key input-icon"></i>
                         <input type="password" id="regPassword" placeholder="নূন্যতম ৬ অক্ষরের পাসওয়ার্ড" required>
+                        <i class="fas fa-eye toggle-icon" onclick="togglePass('regPassword')"></i>
                     </div>
                 </div>
                 <div class="action-buttons">
@@ -159,6 +161,7 @@
                     <div class="input-wrapper">
                         <i class="fas fa-lock input-icon"></i>
                         <input type="password" id="newPasswordInput" placeholder="নূন্যতম ৬ অক্ষরের পাসওয়ার্ড" required>
+                        <i class="fas fa-eye toggle-icon" onclick="togglePass('newPasswordInput')"></i>
                     </div>
                 </div>
                 <div class="input-group">
@@ -166,6 +169,7 @@
                     <div class="input-wrapper">
                         <i class="fas fa-check-double input-icon"></i>
                         <input type="password" id="confirmPasswordInput" placeholder="পুনরায় পাসওয়ার্ডটি লিখুন" required>
+                        <i class="fas fa-eye toggle-icon" onclick="togglePass('confirmPasswordInput')"></i>
                     </div>
                 </div>
                 <div class="action-buttons">
@@ -176,6 +180,25 @@
 
     </div>
 
+    <script>
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            const icon = input.parentElement.querySelector('.toggle-icon');
+            if (input.type === "password") {
+                input.type = "text";
+                if (icon) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            } else {
+                input.type = "password";
+                if (icon) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        }
+    </script>
     <script type="module" src="app.js"></script>
 </body>
 </html>

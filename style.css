@@ -1,4 +1,6 @@
-/* Reset & Typography Base */
+/* ========== MERGED CSS: Base from first block + essential additions from second block ========== */
+
+/* Reset & Typography Base (combined from both sources, using full font stack) */
 * {
     margin: 0;
     padding: 0;
@@ -101,7 +103,9 @@ body {
     font-size: 14px;
 }
 
-.input-wrapper input, .input-wrapper select {
+/* General input/select styling */
+.input-wrapper input, 
+.input-wrapper select {
     width: 100%;
     padding: 12px 15px 12px 42px;
     border: 2px solid #e2e8f0;
@@ -114,6 +118,11 @@ body {
     appearance: none;
 }
 
+/* Password fields need extra right padding for the toggle icon */
+.input-wrapper input[type="password"] {
+    padding-right: 40px;
+}
+
 .input-wrapper select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -122,10 +131,22 @@ body {
     cursor: pointer;
 }
 
-.input-wrapper input:focus, .input-wrapper select:focus {
+.input-wrapper input:focus, 
+.input-wrapper select:focus {
     border-color: #2a5298;
     background-color: #fff;
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
+}
+
+/* Toggle password visibility icon (added from second CSS) */
+.toggle-icon {
+    position: absolute;
+    right: 12px;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 15px;
+    pointer-events: auto; /* ensure clickable */
+    z-index: 2;
 }
 
 /* Flexible Premium Action Buttons */
@@ -177,6 +198,7 @@ body {
     font-size: 13px;
     text-decoration: none;
     margin-top: 5px;
+    cursor: pointer;
 }
 
 .btn-link:hover {

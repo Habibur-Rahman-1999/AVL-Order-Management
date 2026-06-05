@@ -1,5 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updatePassword 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Firebase Config Properties
@@ -75,6 +80,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
             toggleLoading('btnLogin', false, defaultBtnHtml);
             alert('লগইন সফল হয়েছে!');
             console.log("Session Verified:", userCredential.user.uid);
+            // You can redirect or update UI here
         })
         .catch(err => {
             toggleLoading('btnLogin', false, defaultBtnHtml);
@@ -106,7 +112,7 @@ document.getElementById('btnForgotPassword').addEventListener('click', () => {
         body: JSON.stringify({
             to_email: resetTargetEmail,
             otp_code: resetOTP,
-            type: "PASSWORD_RESET" // এখানে মেইল ফিল্টারিং হ্যান্ডেল হবে
+            type: "PASSWORD_RESET"
         })
     })
     .then(() => {
@@ -140,11 +146,12 @@ document.getElementById('btnVerifyResetOtp').addEventListener('click', () => {
     }, 800);
 });
 
-// ---------------- SAVE NEW PASSWORD LOGIC ----------------
+// ---------------- SAVE NEW PASSWORD LOGIC (MERGED) ----------------
 document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
     const newPassword = document.getElementById('newPasswordInput').value;
     const confirmPassword = document.getElementById('confirmPasswordInput').value;
     const defaultBtnHtml = `<i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন`;
+    const user = auth.currentUser;  // Might be null if user hasn't logged in recently
 
     if(!newPassword || !confirmPassword) {
         alert('দয়া করে দুটি ঘরই পূরণ করুন।');
@@ -161,25 +168,41 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
 
     toggleLoading('btnSaveNewPassword', true, defaultBtnHtml);
 
-    // ফায়ারবেস রিয়েল-টাইম ডাটাবেজে পাসওয়ার্ড সিঙ্ক নোড আপডেট করা
-    const emailKey = resetTargetEmail.replace(/[.#$\[\]]/g, "_");
-    
-    set(ref(database, 'password_resets/' + emailKey), {
-        email: resetTargetEmail,
-        updatedPassword: newPassword,
-        updatedAt: new Date().toISOString()
-    })
-    .then(() => {
-        toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-        alert('আপনার নতুন পাসওয়ার্ডটি সফলভাবে সিস্টেমে সংরক্ষিত হয়েছে। অনুগ্রহ করে নতুন পাসওয়ার্ড দিয়ে লগইন করুন!');
-        document.getElementById('newPasswordInput').value = "";
-        document.getElementById('confirmPasswordInput').value = "";
-        switchView(loginView);
-    })
-    .catch(err => {
-        toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-        alert('পাসওয়ার্ড সংরক্ষণে সমস্যা হয়েছে: ' + err.message);
-    });
+    // Priority: If user is already authenticated, use Firebase Auth updatePassword
+    if (user) {
+        // User is logged in – this handles "change password" for authenticated users
+        updatePassword(user, newPassword)
+            .then(() => {
+                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+                alert('সফলভাবে পাসওয়ার্ড আপডেট হয়েছে!');
+                document.getElementById('newPasswordInput').value = "";
+                document.getElementById('confirmPasswordInput').value = "";
+                switchView(loginView);
+            })
+            .catch((error) => {
+                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+                alert('পাসওয়ার্ড আপডেট ব্যর্থ: ' + error.message);
+            });
+    } else {
+        // Fallback: Forgot password flow (user not logged in) – save to Realtime Database
+        const emailKey = resetTargetEmail.replace(/[.#$\[\]]/g, "_");
+        set(ref(database, 'password_resets/' + emailKey), {
+            email: resetTargetEmail,
+            updatedPassword: newPassword,
+            updatedAt: new Date().toISOString()
+        })
+        .then(() => {
+            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+            alert('আপনার নতুন পাসওয়ার্ডটি সফলভাবে সিস্টেমে সংরক্ষিত হয়েছে। অনুগ্রহ করে নতুন পাসওয়ার্ড দিয়ে লগইন করুন!');
+            document.getElementById('newPasswordInput').value = "";
+            document.getElementById('confirmPasswordInput').value = "";
+            switchView(loginView);
+        })
+        .catch(err => {
+            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+            alert('পাসওয়ার্ড সংরক্ষণে সমস্যা হয়েছে: ' + err.message);
+        });
+    }
 });
 
 // ---------------- SEND REGISTRATION OTP LOGIC ----------------
