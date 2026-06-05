@@ -126,6 +126,54 @@
             </form>
         </div>
 
+        <div id="reset-otp-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon" style="background: #dc2626;"><i class="fas fa-key"></i></div>
+                <h2>রিসেট ওটিপি ভেরিফিকেশন</h2>
+                <p id="reset-otp-message">পাসওয়ার্ড রিসেট করার জন্য ওটিপি কোডটি বসান</p>
+            </div>
+            <form onsubmit="return false;">
+                <div class="input-group">
+                    <label>৬ ডিজিটের রিসেট কোড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-shield input-icon"></i>
+                        <input type="text" id="resetOtpInput" placeholder="######" maxlength="6" required>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" id="btnVerifyResetOtp" class="btn btn-danger"><i class="fas fa-unlock-keyhole"></i> কোড যাচাই করুন</button>
+                    <button type="button" id="backToLoginFromReset" class="btn btn-link"><i class="fas fa-arrow-left"></i> লগইন পেজে ফিরুন</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="new-password-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon" style="background: #2563eb;"><i class="fas fa-lock-open"></i></div>
+                <h2>নতুন পাসওয়ার্ড সেট করুন</h2>
+                <p>আপনার অ্যাকাউন্টের জন্য নতুন পাসওয়ার্ড লিখুন</p>
+            </div>
+            <form onsubmit="return false;">
+                <div class="input-group">
+                    <label>নতুন পাসওয়ার্ড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="newPasswordInput" placeholder="নূন্যতম ৬ অক্ষরের পাসওয়ার্ড" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>পাসওয়ার্ড নিশ্চিত করুন</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-check-double input-icon"></i>
+                        <input type="password" id="confirmPasswordInput" placeholder="পুনরায় পাসওয়ার্ডটি লিখুন" required>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" id="btnSaveNewPassword" class="btn btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);"><i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন</button>
+                </div>
+            </form>
+        </div>
+
     </div>
 
     <script type="module" src="app.js"></script>
