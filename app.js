@@ -1,14 +1,16 @@
-// Firebase SDK Web v10 CDN Imports
+// Firebase SDK Web v10 CDN Imports (GitHub Pages-এ সরাসরি রান করার জন্য ব্রাউজার লিংক ব্যবহার করা হয়েছে)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Apnar dynamic project properties (image_a626de.jpg theke huba-hu neya)
+// আপনার প্রজেক্টের আসল Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBRNwi-pA8OSq7__Rn4Hg5X_280W9AexH",
+  apiKey: "AIzaSyBRNwi-pA8OSq7__Rn4Hg5X_280W9AexH0",
   authDomain: "avl-order-management.firebaseapp.com",
-  databaseURL: "https://avl-order-management-default-rtdb.asia-southeast1.firebaseio.com",
+  databaseURL: "https://avl-order-management-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "avl-order-management",
-  storageBucket: "avl-order-management.firebasestorage.app"
+  storageBucket: "avl-order-management.firebasestorage.app",
+  messagingSenderId: "825754454601",
+  appId: "1:825754454601:web:360c6c265f1f6b11b50d98"
 };
 
 // Initialize Firebase
@@ -35,7 +37,6 @@ btnLogin.addEventListener('click', () => {
         .then((userCredential) => {
             alert('লগইন সফল হয়েছে!');
             console.log("Logged In User:", userCredential.user);
-            // Ekhane login processing-er por dashboard-e jawar logic add korte paren
         })
         .catch((error) => {
             alert('লগইন ব্যর্থ হয়েছে: ' + error.message);
