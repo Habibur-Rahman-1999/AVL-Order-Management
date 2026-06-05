@@ -111,7 +111,7 @@ body {
     outline: none;
     background-color: #f8fafc;
     transition: all 0.3s ease;
-    appearance: none; /* Removes native select arrow style */
+    appearance: none;
 }
 
 .input-wrapper select {
@@ -182,6 +182,15 @@ body {
 .btn:hover:not(.btn-link) {
     transform: translateY(-1.5px);
     filter: brightness(0.95);
+}
+
+/* Loading & Disabled Button State Architecture */
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none !important;
+    filter: none !important;
+    pointer-events: none;
 }
 
 @media (max-width: 480px) {
