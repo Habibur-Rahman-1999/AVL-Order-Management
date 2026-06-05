@@ -1,4 +1,4 @@
-/* Reset & Base Styles */
+/* Reset & Typography Base */
 * {
     margin: 0;
     padding: 0;
@@ -8,7 +8,6 @@
 
 body {
     min-height: 100vh;
-    /* Akij Venture vibe-er sathe mil rekhe premium deep blue gradient background */
     background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
     display: flex;
     justify-content: center;
@@ -16,68 +15,77 @@ body {
     padding: 20px;
 }
 
-/* Glassmorphism Dynamic Card */
+/* Glassmorphism Wrapper Dynamic Layout */
 .login-container {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     width: 100%;
-    max-width: 400px;
-    padding: 40px 30px;
+    max-width: 450px;
+    padding: 35px 30px;
     border-radius: 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: hidden;
 }
 
-.login-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+/* Auth Views Visibility Logic */
+.auth-view {
+    display: none;
 }
 
-/* Header UI Elements */
+.auth-view.active {
+    display: block;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Top Header Component */
 .login-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
 .logo-icon {
-    width: 65px;
-    height: 65px;
+    width: 60px;
+    height: 60px;
     background: linear-gradient(135deg, #ff9900, #ff5500);
     color: white;
     border-radius: 50%;
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-size: 26px;
-    margin-bottom: 15px;
-    box-shadow: 0 5px 15px rgba(255, 85, 0, 0.4);
+    font-size: 24px;
+    margin-bottom: 12px;
+    box-shadow: 0 5px 12px rgba(255, 85, 0, 0.3);
 }
 
 .login-header h2 {
     color: #1e3c72;
     font-size: 22px;
     font-weight: 700;
-    margin-bottom: 5px;
 }
 
 .login-header p {
     color: #555;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
-/* Form Group Layouts */
+/* Custom Structure Form Fields */
 .input-group {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .input-group label {
     display: block;
-    color: #333;
-    font-size: 13.5px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
 }
 
 .input-wrapper {
@@ -89,101 +97,95 @@ body {
 .input-icon {
     position: absolute;
     left: 15px;
-    color: #777;
-    font-size: 15px;
-    transition: color 0.3s ease;
+    color: #64748b;
+    font-size: 14px;
 }
 
-.input-wrapper input {
+.input-wrapper input, .input-wrapper select {
     width: 100%;
-    padding: 13px 15px 13px 45px;
+    padding: 12px 15px 12px 42px;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 14.5px;
-    color: #333;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #334155;
     outline: none;
     background-color: #f8fafc;
     transition: all 0.3s ease;
+    appearance: none; /* Removes native select arrow style */
 }
 
-/* Interactive Input Focus */
-.input-wrapper input:focus {
+.input-wrapper select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 16px;
+    cursor: pointer;
+}
+
+.input-wrapper input:focus, .input-wrapper select:focus {
     border-color: #2a5298;
     background-color: #fff;
-    box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.15);
+    box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
-.input-wrapper input:focus + .input-icon {
-    color: #2a5298;
-}
-
-/* Styled Action Buttons */
+/* Flexible Premium Action Buttons */
 .action-buttons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 25px;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 .btn {
     width: 100%;
-    padding: 13px;
+    padding: 12px;
     border: none;
-    border-radius: 12px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14.5px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease-in-out;
 }
 
 .btn-primary {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #162e58 0%, #1e3c72 100%);
-    transform: translateY(-2px);
 }
 
 .btn-secondary {
     background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.3);
 }
 
-.btn-secondary:hover {
-    background: linear-gradient(135deg, #0e8076 0%, #2ed870 100%);
-    transform: translateY(-2px);
+.btn-success {
+    background: linear-gradient(135deg, #11998e 0%, #13b93f 100%);
+    color: white;
 }
 
-/* Footer / Forget Password Link */
-.form-footer {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.forgot-link {
-    color: #e53e3e;
-    font-size: 13.5px;
-    font-weight: 600;
+.btn-link {
+    background: none;
+    color: #2a5298;
+    font-size: 13px;
     text-decoration: none;
-    transition: color 0.2s ease;
+    margin-top: 5px;
 }
 
-.forgot-link:hover {
-    color: #c53030;
+.btn-link:hover {
     text-decoration: underline;
+    color: #162e58;
 }
 
-/* Responsive view optimization */
-@media (max-width: 400px) {
+.btn:hover:not(.btn-link) {
+    transform: translateY(-1.5px);
+    filter: brightness(0.95);
+}
+
+@media (max-width: 480px) {
     .login-container {
-        padding: 30px 20px;
+        padding: 25px 20px;
     }
 }

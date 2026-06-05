@@ -3,51 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>আমার অর্ডার সিস্টেম - AVL</title>
+    <title>AVL Order Management - System</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
     <div class="login-container">
-        <div class="login-header">
-            <div class="logo-icon">
-                <i class="fas fa-boxes-stacked"></i>
-            </div>
-            <h2>AVL Order Management</h2>
-            <p>আমার অর্ডার সিস্টেম</p>
-        </div>
         
-        <form id="auth-form" onsubmit="return false;">
-            <div class="input-group">
-                <label for="userId">ইউজার আইডি / ইমেইল</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-user input-icon"></i>
-                    <input type="text" id="userId" placeholder="আপনার আইডি বা ইমেইল দিন" required>
+        <div id="login-view" class="auth-view active">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div>
+                <h2>AVL Order Management</h2>
+                <p>আমার অর্ডার সিস্টেম</p>
+            </div>
+            <form onsubmit="return false;">
+                <div class="input-group">
+                    <label>ইউজার আইডি / ইমেইল</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="loginEmail" placeholder="আপনার আইডি বা ইমেইল দিন" required>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="input-group">
-                <label for="password">পাসওয়ার্ড</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-lock input-icon"></i>
-                    <input type="password" id="password" placeholder="••••••••" required>
+                <div class="input-group">
+                    <label>পাসওয়ার্ড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
                 </div>
+                <div class="action-buttons">
+                    <button type="button" id="btnLogin" class="btn btn-primary"><i class="fas fa-right-to-bracket"></i> লগইন</button>
+                    <button type="button" id="goToRegister" class="btn btn-link">নতুন অ্যাকাউন্ট তৈরি করুন (রেজিস্টার)</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="register-view" class="auth-view">
+            <div class="login-header">
+                <h2>নিবন্ধন ফর্ম</h2>
+                <p>সঠিক তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন</p>
             </div>
-            
-            <div class="action-buttons">
-                <button type="button" id="btnLogin" class="btn btn-primary">
-                    <i class="fas fa-right-to-bracket"></i> লগইন
-                </button>
-                <button type="button" id="btnRegister" class="btn btn-secondary">
-                    <i class="fas fa-user-plus"></i> রেজিস্টার
-                </button>
+            <form onsubmit="return false;">
+                <div class="input-group">
+                    <label>Enroll ID (আইডি নম্বর)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-id-card input-icon"></i>
+                        <input type="text" id="regEnroll" placeholder="উদাঃ 12345" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>পূর্ণ নাম (Full Name)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user-tag input-icon"></i>
+                        <input type="text" id="regName" placeholder="আপনার নাম লিখুন" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>অফিশিয়াল ইমেইল</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="regEmail" placeholder="username@akijfood.com" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Sales Line (সেলস লাইন)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-route input-icon"></i>
+                        <select id="regSalesLine" required>
+                            <option value="" disabled selected>সেলস লাইন সিলেক্ট করুন</option>
+                            <option value="Beverage">Beverage</option>
+                            <option value="Food">Food</option>
+                            <option value="Dairy">Dairy</option>
+                            <option value="Commodity">Commodity</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Unit (ইউনিট)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-building input-icon"></i>
+                        <select id="regUnit" required>
+                            <option value="" disabled selected>ইউনিট সিলেক্ট করুন</option>
+                            <option value="AVL">Akij Venture Ltd (AVL)</option>
+                            <option value="AFBL">Akij Food & Beverage Ltd (AFBL)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>পাসওয়ার্ড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-key input-icon"></i>
+                        <input type="password" id="regPassword" placeholder="নূন্যতম ৬ অক্ষরের পাসওয়ার্ড" required>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" id="btnSendOTP" class="btn btn-secondary"><i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান</button>
+                    <button type="button" id="goToLogin" class="btn btn-link">ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="otp-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon" style="background: #e53e3e;"><i class="fas fa-shield-halved"></i></div>
+                <h2>ইমেইল ভেরিফিকেশন</h2>
+                <p id="otp-message">আপনার ইমেইলে একটি ভেরিফিকেশন কোড পাঠানো হয়েছে</p>
             </div>
-            
-            <div class="form-footer">
-                <a href="#" id="forgotPassword" class="forgot-link">পাসওয়ার্ড ভুলে গেছেন?</a>
-            </div>
-        </form>
+            <form onsubmit="return false;">
+                <div class="input-group">
+                    <label>৬ ডিজিটের ওটিপি (OTP) কোড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock-open input-icon"></i>
+                        <input type="text" id="otpInput" placeholder="######" maxlength="6" required>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" id="btnVerifyOTP" class="btn btn-success"><i class="fas fa-circle-check"></i> কোড যাচাই ও অ্যাকাউন্ট তৈরি</button>
+                    <button type="button" id="backToRegister" class="btn btn-link"><i class="fas fa-arrow-left"></i> তথ্য সংশোধন করুন</button>
+                </div>
+            </form>
+        </div>
+
     </div>
 
     <script type="module" src="app.js"></script>
