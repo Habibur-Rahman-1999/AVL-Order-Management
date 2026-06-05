@@ -4,7 +4,7 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } f
 
 // Apnar dynamic project properties (image_a626de.jpg theke huba-hu neya)
 const firebaseConfig = {
-  apiKey: "AIzaSyBRNwi-pA80Sq7__Rn4Hg5X_280W9AexH0",
+  apiKey: "AIzaSyBRNwi-pA8OSq7__Rn4Hg5X_280W9AexH",
   authDomain: "avl-order-management.firebaseapp.com",
   databaseURL: "https://avl-order-management-default-rtdb.asia-southeast1.firebaseio.com",
   projectId: "avl-order-management",
