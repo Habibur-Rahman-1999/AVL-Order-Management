@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <title>পাসওয়ার্ড পরিবর্তন</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <h2>প্রথম লগইন – নতুন পাসওয়ার্ড সেট করুন</h2>
+    <input type="password" id="newPassword" placeholder="নতুন পাসওয়ার্ড">
+    <button onclick="changePassword()">সংরক্ষণ</button>
+
+    <script>
+        // 🔴 এখানে আপনার Firebase config বসান
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        function changePassword() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert("সেশন শেষ, আবার লগইন করুন");
+                window.location.href = "index.html";
+                return;
+            }
+            const newPass = document.getElementById("newPassword").value;
+            if (newPass.length < 6) return alert("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে");
+
+            user.updatePassword(newPass).then(() => {
+                return db.collection("users").doc(user.uid).update({ firstLogin: false });
+            }).then(() => {
+                alert("পাসওয়ার্ড পরিবর্তন সফল! আবার লগইন করুন।");
+                auth.signOut();
+                window.location.href = "index.html";
+            }).catch(error => alert("ত্রুটি: " + error.message));
+        }
+    </script>
+</body>
+</html>
