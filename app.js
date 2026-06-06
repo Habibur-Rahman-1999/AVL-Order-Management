@@ -60,12 +60,12 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const defaultHtml = `<i class="fas fa-right-to-bracket"></i> লগইন`;
-  if(!email || !password) { alert('দয়া করে আপনার লগইন আইডি এবং পাসওয়ার্ড প্রদান করুন।'); return; }
+  if(!email || !password) { alert('দয়া করে আপনার লগইন আইডি এবং পাসওয়ার্ড প্রদান করুন।'); return; }
   toggleLoading('btnLogin', true, defaultHtml);
   signInWithEmailAndPassword(auth, email, password)
     .then(() => {
       toggleLoading('btnLogin', false, defaultHtml);
-      alert('লগইন সফল হয়েছে!');
+      alert('লগইন সফল হয়েছে!');
     })
     .catch(err => {
       toggleLoading('btnLogin', false, defaultHtml);
@@ -73,18 +73,18 @@ document.getElementById('btnLogin').addEventListener('click', () => {
     });
 });
 
-// ---------- FORGOT PASSWORD (SEND OTP) – mode: "cors" ----------
+// ---------- FORGOT PASSWORD (SEND OTP) ----------
 document.getElementById('btnForgotPassword').addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const defaultHtml = `<i class="fas fa-key"></i> পাসওয়ার্ড ভুলে গেছেন?`;
-  if(!email) { alert('পাসওয়ার্ড রিসেট করতে প্রথমে ইমেইল দিন।'); return; }
+  if(!email) { alert('पাসওয়ার্ড রিসেট করতে প্রথমে ইমেইল দিন।'); return; }
   toggleLoading('btnForgotPassword', true, defaultHtml);
   resetTargetEmail = email;
   resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "cors",                     // ✅ CORS মোডে ফেরত
+    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       to_email: resetTargetEmail,
@@ -104,7 +104,7 @@ document.getElementById('btnForgotPassword').addEventListener('click', () => {
   })
   .catch(err => {
     toggleLoading('btnForgotPassword', false, defaultHtml);
-    alert('ওটিপি পাঠাতে সমস্যা হয়েছে।');
+    alert('ওটিপি পাঠাতে সমস্যা হয়েছে।');
     console.error(err);
   });
 });
@@ -122,14 +122,14 @@ document.getElementById('btnVerifyResetOtp').addEventListener('click', () => {
   }, 800);
 });
 
-// ---------- SAVE NEW PASSWORD (mode: "cors" + response.json()) ----------
+// ---------- SAVE NEW PASSWORD ----------
 document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
   const newPassword = document.getElementById('newPasswordInput').value;
   const confirmPassword = document.getElementById('confirmPasswordInput').value;
   const defaultHtml = `<i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন`;
 
-  if(!newPassword || !confirmPassword) { alert('দয়া করে দুটি ঘরই পূরণ করুন।'); return; }
-  if(newPassword.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।'); return; }
+  if(!newPassword || !confirmPassword) { alert('দয়া করে দুটি ঘরই পূরণ করুন।'); return; }
+  if(newPassword.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।'); return; }
   if(newPassword !== confirmPassword) { alert('পাসওয়ার্ড দুটি মেলেনি!'); return; }
 
   toggleLoading('btnSaveNewPassword', true, defaultHtml);
@@ -166,7 +166,7 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
   });
 });
 
-// ---------- SEND REGISTRATION OTP (mode: "cors") ----------
+// ---------- SEND REGISTRATION OTP ----------
 document.getElementById('btnSendOTP').addEventListener('click', () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
@@ -176,7 +176,7 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   const password = document.getElementById('regPassword').value;
   const defaultHtml = `<i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান`;
   if(!enroll || !name || !email || !salesLine || !unit || !password) { alert('সব ঘর পূরণ করুন।'); return; }
-  if(password.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।'); return; }
+  if(password.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।'); return; }
   tempRegistrationData = { enroll, name, email, salesLine, unit, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   toggleLoading('btnSendOTP', true, defaultHtml);
@@ -190,7 +190,7 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   .then(data => {
     toggleLoading('btnSendOTP', false, defaultHtml);
     if (data.status === "success") {
-      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
+      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
       switchView(otpView);
     } else {
       alert('ওটিপি পাঠাতে ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
@@ -198,7 +198,7 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   })
   .catch(err => {
     toggleLoading('btnSendOTP', false, defaultHtml);
-    alert("মেইল পাঠাতে সমস্যা হয়েছে।");
+    alert("মেইল পাঠাতে সমস্যা হয়েছে।");
     console.error(err);
   });
 });
@@ -221,7 +221,7 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
         createdAt: new Date().toISOString()
       }).then(() => {
         toggleLoading('btnVerifyOTP', false, defaultHtml);
-        alert('অভিনন্দন! আপনার অ্যাকাউন্টটি সফলভাবে রেজিস্টার্ড হয়েছে।');
+        alert('অভিনন্দন! আপনার অ্যাকাউন্টটি সফলভাবে রেজিস্টার্ড হয়েছে।');
         document.getElementById('otpInput').value = "";
         switchView(loginView);
       }).catch(dbErr => {
