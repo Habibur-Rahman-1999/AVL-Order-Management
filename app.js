@@ -167,10 +167,9 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
 
     toggleLoading('btnSaveNewPassword', true, defaultBtnHtml);
 
-    // Apps Script-এ রিকোয়েস্ট পাঠিয়ে Firebase Auth-এ পাসওয়ার্ড আপডেট করা
     fetch(appsScriptURL, {
         method: "POST",
-        mode: "no-cors",
+        mode: "cors",   // ✅ CORS ব্যবহার করতে হবে
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             action: "PASSWORD_RESET_CONFIRM",
@@ -179,19 +178,23 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
             new_password: newPassword
         })
     })
-    .then(() => {
+    .then(response => response.json())
+    .then(data => {
         toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-        alert('আপনার পাসওয়ার্ড সফলভাবে রিসেট হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
-        // Clear fields & state
-        document.getElementById('newPasswordInput').value = "";
-        document.getElementById('confirmPasswordInput').value = "";
-        resetOTP = null;
-        resetTargetEmail = "";
-        switchView(loginView);
+        if (data.status === "success") {
+            alert('আপনার পাসওয়ার্ড সফলভাবে রিসেট হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
+            document.getElementById('newPasswordInput').value = "";
+            document.getElementById('confirmPasswordInput').value = "";
+            resetOTP = null;
+            resetTargetEmail = "";
+            switchView(loginView);
+        } else {
+            alert('পাসওয়ার্ড আপডেট ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
+        }
     })
     .catch(err => {
         toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
-        alert('পাসওয়ার্ড আপডেট করতে সার্ভারে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+        alert('সার্ভারে যোগাযোগে সমস্যা হয়েছে। বিস্তারিত: ' + err.message);
         console.error(err);
     });
 });
