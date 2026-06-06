@@ -1,3 +1,5 @@
+/* ========== YOUR ORIGINAL PERFECT CSS ========== */
+
 /* Reset & Typography Base */
 * {
     margin: 0;
@@ -92,7 +94,6 @@ body {
     position: relative;
     display: flex;
     align-items: center;
-    width: 100%;
 }
 
 .input-icon {
@@ -120,7 +121,7 @@ body {
 
 /* Password fields need extra right padding for the toggle icon */
 .input-wrapper input[type="password"],
-.input-wrapper input[type="text"].password-field {
+.input-wrapper input[type="text"] {
     padding-right: 42px;
 }
 
@@ -139,8 +140,8 @@ body {
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
-/* Toggle password visibility icon */
-.toggle-icon {
+/* Toggle password visibility icon (Perfect Positioning) */
+.toggle-icon, .id-toggle {
     position: absolute;
     right: 15px;
     cursor: pointer;
@@ -148,19 +149,6 @@ body {
     font-size: 15px;
     pointer-events: auto;
     z-index: 10;
-}
-
-/* OTP Notification Message Styling */
-#otp-message {
-    background-color: #e0f2fe;
-    border-left: 4px solid #0284c7;
-    color: #0369a1;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    line-height: 1.4;
 }
 
 /* Flexible Premium Action Buttons */
@@ -210,25 +198,13 @@ body {
     background: none;
     color: #2a5298;
     font-size: 13.5px;
-    font-weight: 600;
     text-decoration: none;
     margin-top: 5px;
     cursor: pointer;
-    display: inline-block;
+    text-align: center;
 }
 
 .btn-link:hover {
-    text-decoration: underline;
-    color: #162e58;
-}
-
-.link-text {
-    color: #2a5298;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.link-text:hover {
     text-decoration: underline;
     color: #162e58;
 }
@@ -238,7 +214,7 @@ body {
     filter: brightness(0.95);
 }
 
-/* Loading & Disabled Button State */
+/* Loading & Disabled Button State Architecture */
 .btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
