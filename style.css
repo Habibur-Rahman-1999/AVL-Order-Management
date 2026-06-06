@@ -1,5 +1,3 @@
-/* ========== UPDATED PREMIUM CSS: With Native OTP & Toggle Support ========== */
-
 /* Reset & Typography Base */
 * {
     margin: 0;
@@ -29,12 +27,12 @@ body {
     overflow: hidden;
 }
 
-/* Auth & OTP Views Visibility Logic (Supports both .auth-view and .view) */
-.auth-view, .view {
+/* Auth Views Visibility Logic */
+.auth-view {
     display: none;
 }
 
-.auth-view.active, .view.active {
+.auth-view.active {
     display: block;
     animation: fadeIn 0.4s ease-in-out;
 }
@@ -90,7 +88,7 @@ body {
     margin-bottom: 6px;
 }
 
-.input-wrapper, .password-wrapper {
+.input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
@@ -106,7 +104,7 @@ body {
 }
 
 /* General input/select styling */
-.input-wrapper input, .password-wrapper input,
+.input-wrapper input, 
 .input-wrapper select {
     width: 100%;
     padding: 12px 15px 12px 42px;
@@ -120,8 +118,9 @@ body {
     appearance: none;
 }
 
-/* Password fields extra right padding for the toggle icon */
-.input-wrapper input[type="password"], .password-wrapper input {
+/* Password fields need extra right padding for the toggle icon */
+.input-wrapper input[type="password"],
+.input-wrapper input[type="text"].password-field {
     padding-right: 42px;
 }
 
@@ -133,49 +132,35 @@ body {
     cursor: pointer;
 }
 
-.input-wrapper input:focus, .password-wrapper input:focus,
+.input-wrapper input:focus, 
 .input-wrapper select:focus {
     border-color: #2a5298;
     background-color: #fff;
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
-/* Toggle password visibility icon (Supports both .toggle-icon and .id-toggle) */
-.toggle-icon, .id-toggle {
+/* Toggle password visibility icon */
+.toggle-icon {
     position: absolute;
     right: 15px;
     cursor: pointer;
     color: #64748b;
     font-size: 15px;
-    pointer-events: auto; /* ensure clickable */
+    pointer-events: auto;
     z-index: 10;
 }
 
-/* OTP Status Notification Box Design */
-#otp-message, #reset-otp-message {
-    background-color: #f0f7ff;
-    border-left: 4px solid #2a5298;
-    color: #1e3c72;
+/* OTP Notification Message Styling */
+#otp-message {
+    background-color: #e0f2fe;
+    border-left: 4px solid #0284c7;
+    color: #0369a1;
     padding: 12px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 15px;
-    text-align: left;
-    line-height: 1.5;
-}
-
-/* Text Navigation Links styling */
-.link-text {
-    color: #2a5298;
-    font-weight: 700;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.link-text:hover {
-    color: #162e58;
-    text-decoration: underline;
+    margin-bottom: 20px;
+    line-height: 1.4;
 }
 
 /* Flexible Premium Action Buttons */
@@ -201,25 +186,6 @@ body {
     transition: all 0.2s ease-in-out;
 }
 
-/* Also fallback selector support for regular button tags from index.html */
-button:not(.btn-link):not(.id-toggle) {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 10px;
-    font-size: 14.5px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease-in-out;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    color: white;
-    margin-top: 10px;
-}
-
 .btn-primary {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     color: white;
@@ -241,29 +207,39 @@ button:not(.btn-link):not(.id-toggle) {
 }
 
 .btn-link {
-    background: none !important;
-    color: #2a5298 !important;
-    font-size: 13px !important;
-    text-decoration: none !important;
-    margin-top: 10px !important;
-    cursor: pointer !important;
-    box-shadow: none !important;
-    width: auto !important;
-    display: inline-block !important;
+    background: none;
+    color: #2a5298;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 5px;
+    cursor: pointer;
+    display: inline-block;
 }
 
 .btn-link:hover {
-    text-decoration: underline !important;
-    color: #162e58 !important;
+    text-decoration: underline;
+    color: #162e58;
 }
 
-.btn:hover:not(.btn-link), button:hover:not(.btn-link):not(.id-toggle) {
+.link-text {
+    color: #2a5298;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.link-text:hover {
+    text-decoration: underline;
+    color: #162e58;
+}
+
+.btn:hover:not(.btn-link) {
     transform: translateY(-1.5px);
     filter: brightness(0.95);
 }
 
-/* Loading & Disabled Button State Architecture */
-.btn:disabled, button:disabled {
+/* Loading & Disabled Button State */
+.btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
     transform: none !important;
@@ -271,7 +247,6 @@ button:not(.btn-link):not(.id-toggle) {
     pointer-events: none;
 }
 
-/* Responsive Media Queries */
 @media (max-width: 480px) {
     .login-container {
         padding: 25px 20px;

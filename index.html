@@ -4,101 +4,161 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AVL Order Management</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
-        <!-- 1. LOGIN VIEW -->
-        <div id="login-view" class="view active">
-            <h2>লগইন</h2>
-            <div class="input-group">
-                <label>ইউজার আইডি / ইমেইল</label>
-                <input type="email" id="loginEmail" placeholder="example@akijfood.com">
+    <div class="login-container">
+        
+        <!-- ================= ১. লগইন ভিউ ================= -->
+        <div id="login-view" class="auth-view active">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fas fa-user-shield"></i></div>
+                <h2>লগইন</h2>
+                <p>AVL Order Management</p>
             </div>
-            <div class="input-group">
-                <label>পাসওয়ার্ড</label>
-                <div class="password-wrapper">
-                    <input type="password" id="loginPassword" placeholder="পাসওয়ার্ড লিখুন">
-                    <i class="fas fa-eye id-toggle" onclick="togglePassVisibility('loginPassword', this)"></i>
+            <form id="login-form">
+                <div class="input-group">
+                    <label>ইউজার আইডি / ইমেইল</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="text" id="login-email" placeholder="example@akijfood.com" required>
+                    </div>
                 </div>
-            </div>
-            <button id="btnLogin"><i class="fas fa-right-to-bracket"></i> লগইন</button>
-            <button id="btnForgotPassword" class="btn-link"><i class="fas fa-key"></i> পাসওয়ার্ড ভুলে গেছেন?</button>
-            <p>নতুন অ্যাকাউন্ট? <span id="goToRegister" class="link-text">রেজিস্ট্রেশন করুন</span></p>
+                <div class="input-group">
+                    <label>পাসওয়ার্ড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="login-password" placeholder="পাসওয়ার্ড লিখুন" required>
+                        <i class="fas fa-eye toggle-icon" id="toggle-login-password"></i>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> লগইন</button>
+                    <span class="btn-link" id="go-forgot" style="text-align: center;">পাসওয়ার্ড ভুলে গেছেন?</span>
+                </div>
+                <div class="switch-text" style="text-align: center; margin-top: 20px; font-size: 13.5px; color: #555;">
+                    নতুন অ্যাকাউন্ট? <span class="link-text" id="go-register">রেজিস্ট্রেশন করুন</span>
+                </div>
+            </form>
         </div>
 
-        <!-- 2. REGISTER VIEW -->
-        <div id="register-view" class="view">
-            <h2>রেজিস্ট্রেশন</h2>
-            <div class="input-group"><label>এনরোলমেন্ট নম্বর</label><input type="text" id="regEnroll"></div>
-            <div class="input-group"><label>নাম</label><input type="text" id="regName"></div>
-            <div class="input-group"><label>ইমেইল</label><input type="email" id="regEmail"></div>
-            <div class="input-group"><label>সিলস লাইন</label><input type="text" id="regSalesLine"></div>
-            <div class="input-group"><label>ইউনিট</label><input type="text" id="regUnit"></div>
-            <div class="input-group">
-                <label>পাসওয়ার্ড</label>
-                <div class="password-wrapper">
-                    <input type="password" id="regPassword" placeholder="নূন্যতম ৬ অক্ষর">
-                    <i class="fas fa-eye id-toggle" onclick="togglePassVisibility('regPassword', this)"></i>
-                </div>
+        <!-- ================= ২. রেজিস্ট্রেশন ভিউ ================= -->
+        <div id="register-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fas fa-user-plus"></i></div>
+                <h2>রেজিস্ট্রেশন</h2>
+                <p>নতুন অ্যাকাউন্ট তৈরি করুন</p>
             </div>
-            <button id="btnSendOTP"><i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান</button>
-            <p>ইতিমধ্যে অ্যাকাউন্ট আছে? <span id="goToLogin" class="link-text">লগইন করুন</span></p>
+            <form id="register-form">
+                <div class="input-group">
+                    <label>এনরোলমেন্ট নম্বর</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-id-card input-icon"></i>
+                        <input type="text" id="reg-enrollment" placeholder="এনরোলমেন্ট নম্বর দিন" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>নাম</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="reg-name" placeholder="আপনার পুরো নাম লিখুন" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>ইমেইল</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="reg-email" placeholder="example@akijfood.com" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>সেলস লাইন</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-chart-line input-icon"></i>
+                        <select id="reg-sales-line" required>
+                            <option value="" disabled selected>সেলস লাইন সিলেক্ট করুন</option>
+                            <option value="Horeca">Horeca</option>
+                            <option value="Modern Trade">Modern Trade</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>ইউনিট</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-building input-icon"></i>
+                        <select id="reg-unit" required>
+                            <option value="" disabled selected>ইউনিট সিলেক্ট করুন</option>
+                            <option value="AFBL">AFBL (Akij Food & Beverage Ltd)</option>
+                            <option value="AVL">AVL (Akij Venture Ltd)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>পাসওয়ার্ড তৈরি করুন</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="reg-password" placeholder="একটি স্ট্রং পাসওয়ার্ড দিন" required>
+                        <i class="fas fa-eye toggle-icon" id="toggle-reg-password"></i>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check-circle"></i> সাবমিট করুন</button>
+                    <button type="button" class="btn btn-danger" id="back-to-login-from-reg">ফিরে যান</button>
+                </div>
+            </form>
         </div>
 
-        <!-- 3. REGISTRATION OTP VIEW -->
-        <div id="otp-view" class="view">
-            <h2>ওটিপি যাচাইকরণ</h2>
-            <p id="otp-message"></p>
-            <div class="input-group"><input type="text" id="otpInput" placeholder="৬ ডিজিট কোড"></div>
-            <button id="btnVerifyOTP"><i class="fas fa-circle-check"></i> কোড যাচাই ও অ্যাকাউন্ট তৈরি</button>
-            <button id="backToRegister" class="btn-link">ফিরে যান</button>
+        <!-- ================= ৩. ওটিপি ভেরিফিকেশন ভিউ ================= -->
+        <div id="otp-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fas fa-key"></i></div>
+                <h2>ভেরিফিকেশন</h2>
+                <p>ওটিপি কোড যাচাই করুন</p>
+            </div>
+            <div id="otp-message">আপনার ইমেইলে একটি ভেরিফিকেশন ওটিপি (OTP) পাঠানো হয়েছে।</div>
+            <form id="otp-form">
+                <div class="input-group">
+                    <label>৬-ডিজিটের ওটিপি কোড</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-shield-alt input-icon"></i>
+                        <input type="text" id="otp-code" placeholder="কোডটি এখানে লিখুন" required maxlength="6">
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">ভেরিফাই করুন</button>
+                    <button type="button" class="btn btn-danger" id="back-to-login-from-otp">বাতিল করুন</button>
+                </div>
+            </form>
         </div>
 
-        <!-- 4. RESET OTP VIEW -->
-        <div id="reset-otp-view" class="view">
-            <h2>রিসেট ওটিপি যাচাই</h2>
-            <p id="reset-otp-message"></p>
-            <div class="input-group"><input type="text" id="resetOtpInput" placeholder="৬ ডিজিট রিসেট কোড"></div>
-            <button id="btnVerifyResetOtp"><i class="fas fa-unlock-keyhole"></i> কোড যাচাই করুন</button>
-            <button id="backToLoginFromReset" class="btn-link">লগইন পেজে ফিরুন</button>
+        <!-- ================= ৪. পাসওয়ার্ড রিসেট ভিউ ================= -->
+        <div id="forgot-view" class="auth-view">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fas fa-unlock-alt"></i></div>
+                <h2>রিসেট রিকোয়েস্ট</h2>
+                <p>আপনার রেজিস্টার্ড ইমেইলটি দিন</p>
+            </div>
+            <form id="forgot-form">
+                <div class="input-group">
+                    <label>ইউজার আইডি / ইমেইল</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="forgot-email" placeholder="example@akijfood.com" required>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">ওটিপি পাঠান</button>
+                    <button type="button" class="btn btn-danger" id="back-to-login-from-forgot">ফিরে যান</button>
+                </div>
+            </form>
         </div>
 
-        <!-- 5. NEW PASSWORD VIEW -->
-        <div id="new-password-view" class="view">
-            <h2>নতুন পাসওয়ার্ড সেট করুন</h2>
-            <div class="input-group">
-                <label>নতুন পাসওয়ার্ড</label>
-                <div class="password-wrapper">
-                    <input type="password" id="newPasswordInput" placeholder="নূন্যতম ৬ অক্ষর">
-                    <i class="fas fa-eye id-toggle" onclick="togglePassVisibility('newPasswordInput', this)"></i>
-                </div>
-            </div>
-            <div class="input-group">
-                <label>পাসওয়ার্ড নিশ্চিত করুন</label>
-                <div class="password-wrapper">
-                    <input type="password" id="confirmPasswordInput" placeholder="আবার লিখুন">
-                    <i class="fas fa-eye id-toggle" onclick="togglePassVisibility('confirmPasswordInput', this)"></i>
-                </div>
-            </div>
-            <button id="btnSaveNewPassword"><i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন</button>
-        </div>
     </div>
 
-    <script>
-        function togglePassVisibility(inputId, iconElement) {
-            const passInput = document.getElementById(inputId);
-            if (passInput.type === "password") {
-                passInput.type = "text";
-                iconElement.classList.replace("fa-eye", "fa-eye-slash");
-            } else {
-                passInput.type = "password";
-                iconElement.classList.replace("fa-eye-slash", "fa-eye");
-            }
-        }
-    </script>
-    <script type="module" src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
