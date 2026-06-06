@@ -2,8 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  updatePassword 
+  createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -53,7 +52,8 @@ function toggleLoading(buttonId, isProcessing, defaultHtml) {
   }
 }
 
-const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
+// ⚠️ মনে করে আপনার নতুন Apps Script Deployment URL টি এখানে বসাবেন
+const appsScriptURL = "https://script.google.com/macros/s/AKfycbzh2R1mXfRtjD0ObjbAQVNsiZsacrkW--oxV0wGUnjCU1ZaPrORx9kn8TIZbYksH1XaCQ/exec";
 
 // ---------- LOGIN ----------
 document.getElementById('btnLogin').addEventListener('click', () => {
@@ -77,15 +77,14 @@ document.getElementById('btnLogin').addEventListener('click', () => {
 document.getElementById('btnForgotPassword').addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const defaultHtml = `<i class="fas fa-key"></i> পাসওয়ার্ড ভুলে গেছেন?`;
-  if(!email) { alert('पাসওয়ার্ড রিসেট করতে প্রথমে ইমেইল দিন।'); return; }
+  if(!email) { alert('পাসওয়ার্ড রিসেট করতে প্রথমে ইমেইল দিন।'); return; }
   toggleLoading('btnForgotPassword', true, defaultHtml);
   resetTargetEmail = email;
   resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
+  // CORS ফ্রি টেক্সট রিকোয়েস্ট ফ্লো
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       to_email: resetTargetEmail,
       otp_code: resetOTP,
@@ -136,8 +135,6 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
 
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "PASSWORD_RESET_CONFIRM",
       email: resetTargetEmail,
@@ -180,10 +177,9 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   tempRegistrationData = { enroll, name, email, salesLine, unit, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   toggleLoading('btnSendOTP', true, defaultHtml);
+  
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ to_email: email, to_name: name, otp_code: generatedOTP, type: "REGISTRATION" })
   })
   .then(response => response.json())
