@@ -73,7 +73,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
     });
 });
 
-// ---------- FORGOT PASSWORD (SEND OTP) ----------
+// ---------- FORGOT PASSWORD (SEND OTP) – mode: "cors" ----------
 document.getElementById('btnForgotPassword').addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const defaultHtml = `<i class="fas fa-key"></i> পাসওয়ার্ড ভুলে গেছেন?`;
@@ -84,7 +84,7 @@ document.getElementById('btnForgotPassword').addEventListener('click', () => {
 
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "no-cors",
+    mode: "cors",                     // ✅ CORS মোডে ফেরত
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       to_email: resetTargetEmail,
@@ -92,10 +92,15 @@ document.getElementById('btnForgotPassword').addEventListener('click', () => {
       type: "PASSWORD_RESET"
     })
   })
-  .then(() => {
+  .then(response => response.json())
+  .then(data => {
     toggleLoading('btnForgotPassword', false, defaultHtml);
-    document.getElementById('reset-otp-message').innerText = `${resetTargetEmail} ঠিকানায় পাসওয়ার্ড রিসেট কোড পাঠানো হয়েছে।`;
-    switchView(resetOtpView);
+    if (data.status === "success") {
+      document.getElementById('reset-otp-message').innerText = `${resetTargetEmail} ঠিকানায় পাসওয়ার্ড রিসেট কোড পাঠানো হয়েছে।`;
+      switchView(resetOtpView);
+    } else {
+      alert('ওটিপি পাঠাতে ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
+    }
   })
   .catch(err => {
     toggleLoading('btnForgotPassword', false, defaultHtml);
@@ -117,7 +122,7 @@ document.getElementById('btnVerifyResetOtp').addEventListener('click', () => {
   }, 800);
 });
 
-// ---------- SAVE NEW PASSWORD (NO-CORS) ----------
+// ---------- SAVE NEW PASSWORD (mode: "cors" + response.json()) ----------
 document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
   const newPassword = document.getElementById('newPasswordInput').value;
   const confirmPassword = document.getElementById('confirmPasswordInput').value;
@@ -131,7 +136,7 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
 
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "no-cors",
+    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "PASSWORD_RESET_CONFIRM",
@@ -140,23 +145,28 @@ document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
       new_password: newPassword
     })
   })
-  .then(() => {
+  .then(response => response.json())
+  .then(data => {
     toggleLoading('btnSaveNewPassword', false, defaultHtml);
-    alert('পাসওয়ার্ড রিসেট রিকোয়েস্ট পাঠানো হয়েছে। এখন নতুন পাসওয়ার্ড দিয়ে লগইন করে দেখুন।');
-    document.getElementById('newPasswordInput').value = "";
-    document.getElementById('confirmPasswordInput').value = "";
-    resetOTP = null;
-    resetTargetEmail = "";
-    switchView(loginView);
+    if (data.status === "success") {
+      alert('পাসওয়ার্ড সফলভাবে রিসেট হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।');
+      document.getElementById('newPasswordInput').value = "";
+      document.getElementById('confirmPasswordInput').value = "";
+      resetOTP = null;
+      resetTargetEmail = "";
+      switchView(loginView);
+    } else {
+      alert('পাসওয়ার্ড আপডেট ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
+    }
   })
   .catch(err => {
     toggleLoading('btnSaveNewPassword', false, defaultHtml);
-    alert('সার্ভারে যোগাযোগে সমস্যা হয়েছে।');
+    alert('সার্ভারে যোগাযোগে সমস্যা হয়েছে। বিস্তারিত: ' + err.message);
     console.error(err);
   });
 });
 
-// ---------- SEND REGISTRATION OTP ----------
+// ---------- SEND REGISTRATION OTP (mode: "cors") ----------
 document.getElementById('btnSendOTP').addEventListener('click', () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
@@ -172,14 +182,19 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   toggleLoading('btnSendOTP', true, defaultHtml);
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "no-cors",
+    mode: "cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ to_email: email, to_name: name, otp_code: generatedOTP, type: "REGISTRATION" })
   })
-  .then(() => {
+  .then(response => response.json())
+  .then(data => {
     toggleLoading('btnSendOTP', false, defaultHtml);
-    document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
-    switchView(otpView);
+    if (data.status === "success") {
+      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
+      switchView(otpView);
+    } else {
+      alert('ওটিপি পাঠাতে ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
+    }
   })
   .catch(err => {
     toggleLoading('btnSendOTP', false, defaultHtml);
