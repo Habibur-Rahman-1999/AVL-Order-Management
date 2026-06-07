@@ -20,32 +20,22 @@
         <form onsubmit="return false;">
             <div class="input-group">
                 <label>ইউজার আইডি / ইমেইল</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-user input-icon"></i>
-                    <input type="text" id="loginEmail" placeholder="username@akijfood.com" required>
-                </div>
+                <div class="input-wrapper"><i class="fas fa-user input-icon"></i><input type="text" id="loginEmail" required></div>
             </div>
             <div class="input-group">
                 <label>পাসওয়ার্ড</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-lock input-icon"></i>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required>
-                    <i class="fas fa-eye toggle-icon" onclick="togglePass('loginPassword')"></i>
-                </div>
+                <div class="input-wrapper"><i class="fas fa-lock input-icon"></i><input type="password" id="loginPassword" required><i class="fas fa-eye toggle-icon" onclick="togglePass('loginPassword')"></i></div>
             </div>
             <div class="action-buttons">
                 <button type="button" id="btnLogin" class="btn btn-primary"><i class="fas fa-right-to-bracket"></i> লগইন</button>
-                <button type="button" id="goToRegister" class="btn btn-link">নতুন অ্যাকাউন্ট তৈরি করুন (রেজিস্টার)</button>
+                <button type="button" id="goToRegister" class="btn btn-link">নতুন অ্যাকাউন্ট তৈরি করুন</button>
             </div>
         </form>
     </div>
 
     <!-- REGISTER VIEW -->
     <div id="register-view" class="auth-view login-container">
-        <div class="login-header">
-            <h2>নিবন্ধন ফর্ম</h2>
-            <p>সঠিক তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন</p>
-        </div>
+        <div class="login-header"><h2>নিবন্ধন ফর্ম</h2><p>সঠিক তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন</p></div>
         <form onsubmit="return false;">
             <div class="input-group"><label>Enroll ID</label><div class="input-wrapper"><i class="fas fa-id-card input-icon"></i><input type="text" id="regEnroll" required></div></div>
             <div class="input-group"><label>পূর্ণ নাম</label><div class="input-wrapper"><i class="fas fa-user-tag input-icon"></i><input type="text" id="regName" required></div></div>
@@ -76,8 +66,8 @@
             </div>
             <div class="input-group"><label>পাসওয়ার্ড</label><div class="input-wrapper"><i class="fas fa-key input-icon"></i><input type="password" id="regPassword" required><i class="fas fa-eye toggle-icon" onclick="togglePass('regPassword')"></i></div></div>
             <div class="action-buttons">
-                <button type="button" id="btnSendOTP" class="btn btn-secondary"><i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান</button>
-                <button type="button" id="goToLogin" class="btn btn-link">ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন</button>
+                <button type="button" id="btnSendOTP" class="btn btn-secondary"><i class="fas fa-paper-plane"></i> ওটিপি পাঠান</button>
+                <button type="button" id="goToLogin" class="btn btn-link">ইতিমধ্যে অ্যাকাউন্ট আছে?</button>
             </div>
         </form>
     </div>
@@ -94,7 +84,7 @@
         </form>
     </div>
 
-    <!-- MAIN APPLICATION -->
+    <!-- MAIN APP -->
     <div id="main-app" class="auth-view main-app-container" style="display: none;">
         <nav class="top-navbar">
             <div class="nav-brand"><div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div></div>
@@ -112,44 +102,36 @@
         <div class="main-content">
             <div id="dashboard-view" class="sub-view active"><h2>ড্যাশবোর্ড</h2><p>স্বাগতম, <span id="loggedUserName"></span>!</p></div>
             <div id="orderForm-view" class="sub-view"><h2>অর্ডার ফর্ম</h2><p>শীঘ্রই আসছে...</p></div>
-            <div id="customerList-view" class="sub-view"><h2>কাস্টমার তালিকা</h2><div id="customerActions" style="margin-bottom:20px;"></div><div id="customerTableContainer"></div></div>
+            <div id="customerList-view" class="sub-view">
+                <h2>কাস্টমার তালিকা</h2>
+                <div id="customerActions" style="margin-bottom:20px;"></div>
+                <div id="customerTableContainer"></div>
+            </div>
             <div id="addCustomer-view" class="sub-view">
                 <div class="card">
-                    <h2><i class="fas fa-user-plus"></i> নতুন কাস্টমার যোগ করুন</h2>
+                    <h2><i class="fas fa-user-plus"></i> <span id="customerFormTitle">নতুন কাস্টমার যোগ করুন</span></h2>
                     <div class="form-grid">
                         <div class="input-group"><label>Customer Code</label><input type="text" id="custCode" required></div>
                         <div class="input-group"><label>Customer Name</label><input type="text" id="custName" required></div>
                         <div class="input-group"><label>Warehouse</label><input type="text" id="custWarehouse" required></div>
-                        <div class="input-group">
-                            <label>Unit</label>
-                            <select id="custUnit" required>
-                                <option value="">সিলেক্ট করুন</option>
-                                <option value="AFBL">AFBL</option><option value="ADL">ADL</option><option value="AEEL">AEEL</option>
-                                <option value="AALL">AALL</option><option value="AHHL">AHHL</option><option value="ABEL">ABEL</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Line</label>
-                            <select id="custLine" required><option value="">প্রথমে Unit সিলেক্ট করুন</option></select>
-                        </div>
+                        <div class="input-group"><label>Unit</label><select id="custUnit" required><option value="">সিলেক্ট করুন</option><option value="AFBL">AFBL</option><option value="ADL">ADL</option><option value="AEEL">AEEL</option><option value="AALL">AALL</option><option value="AHHL">AHHL</option><option value="ABEL">ABEL</option></select></div>
+                        <div class="input-group"><label>Line</label><select id="custLine" required><option value="">প্রথমে Unit সিলেক্ট করুন</option></select></div>
                         <div class="input-group"><label>Region</label><input type="text" id="custRegion" required></div>
                         <div class="input-group"><label>Area</label><input type="text" id="custArea" required></div>
                         <div class="input-group"><label>Point</label><input type="text" id="custPoint"></div>
                         <div class="input-group"><label>ERP Code</label><input type="text" id="custErpCode"></div>
-                        <div class="input-group full-width"><label>Sales Person Email(s) (কমা দিয়ে আলাদা করুন)</label><input type="text" id="custSalesEmails" placeholder="email1@akij.com, email2@akij.com" required></div>
+                        <div class="input-group full-width"><label>Sales Person Email(s) (কমা দিয়ে আলাদা করুন)</label><input type="text" id="custSalesEmails" required></div>
                     </div>
+                    <input type="hidden" id="editCustomerId" value="">
                     <div class="btn-row">
                         <button type="button" id="btnSaveCustomer" class="btn btn-primary"><i class="fas fa-save"></i> সেভ করুন</button>
+                        <button type="button" id="btnCancelCustomerEdit" class="btn btn-link" style="width:auto; display:none;"><i class="fas fa-times"></i> বাতিল</button>
                         <button type="button" id="btnBackToCustomerList" class="btn btn-link" style="width:auto;"><i class="fas fa-arrow-left"></i> তালিকায় ফিরুন</button>
                     </div>
                 </div>
                 <div class="upload-card">
-                    <h3><i class="fas fa-file-csv"></i> অথবা CSV আপলোড করে একাধিক কাস্টমার যোগ করুন</h3>
-                    <div class="upload-area" id="csvUploadArea">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>CSV ফাইলটি এখানে ড্রাগ করুন অথবা ক্লিক করুন</p>
-                        <input type="file" id="csvFileInput" accept=".csv">
-                    </div>
+                    <h3><i class="fas fa-file-csv"></i> CSV আপলোড করে একাধিক কাস্টমার যোগ করুন</h3>
+                    <div class="upload-area" id="csvUploadArea"><i class="fas fa-cloud-upload-alt"></i><p>CSV ফাইলটি এখানে ড্রাগ করুন অথবা ক্লিক করুন</p><input type="file" id="csvFileInput" accept=".csv"></div>
                     <div id="csvPreview"></div>
                     <button type="button" id="btnUploadCSV" class="btn btn-success" style="display:none; width:auto;"><i class="fas fa-upload"></i> CSV থেকে ইম্পোর্ট করুন</button>
                     <div id="csvStatus" style="margin-top:10px;"></div>
