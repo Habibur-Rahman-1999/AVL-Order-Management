@@ -45,7 +45,7 @@ function updateLineDropdown(unitSelectId, lineSelectId) {
   }
 }
 
-// Attach unit change for registration (no need to add again later)
+// Attach unit change for registration
 document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
 
 // Auth views
@@ -79,18 +79,20 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   const dft = `<i class="fas fa-right-to-bracket"></i> লগইন`;
   if (!email || !password) { alert('ইমেইল ও পাসওয়ার্ড দিন।'); return; }
   toggleLoading('btnLogin', true, dft);
+  
   signInWithEmailAndPassword(auth, email, password).then(async (uc) => {
     const user = uc.user;
-    console.log("Logged in:", user.uid);
     const snap = await get(ref(database, 'users/' + user.uid));
     if (!snap.exists()) { await signOut(auth); toggleLoading('btnLogin', false, dft); alert('অ্যাকাউন্ট পাওয়া যায়নি।'); return; }
+    
     const userData = snap.val();
     if (userData.status !== 'approved') { await signOut(auth); toggleLoading('btnLogin', false, dft); alert('অনুমোদিত নয়।'); return; }
+    
     const adminsSnap = await get(ref(database, 'admins'));
     const admins = adminsSnap.val() || {};
     const isAdmin = admins[email.replace(/\./g, '_')] === true;
+    
     currentUser = { uid: user.uid, email: user.email, name: userData.name, role: isAdmin ? 'admin' : 'user', status: userData.status };
-    console.log("Current user:", currentUser);
     toggleLoading('btnLogin', false, dft);
     showMainApp();
   }).catch(err => { toggleLoading('btnLogin', false, dft); alert('লগইন ব্যর্থ: ' + err.message); });
@@ -105,11 +107,13 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   const line = document.getElementById('regLine').value;
   const password = document.getElementById('regPassword').value;
   const dft = `<i class="fas fa-paper-plane"></i> ওটিপি পাঠান`;
+  
   if (!enroll || !name || !email || !unit || !line || !password) { alert('সকল ঘর পূরণ করুন।'); return; }
   if (password.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষর।'); return; }
+  
   tempRegistrationData = { enroll, name, email, unit, line, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log("OTP:", generatedOTP);
+  
   toggleLoading('btnSendOTP', true, dft);
   fetch(appsScriptURL, { method:"POST", mode:"no-cors", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ to_email:email, to_name:name, otp_code:generatedOTP, type:"REGISTRATION" }) })
   .then(() => { toggleLoading('btnSendOTP', false, dft); document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`; switchAuthView(otpView); })
@@ -120,6 +124,7 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
   const userOTP = document.getElementById('otpInput').value.trim();
   const dft = `<i class="fas fa-circle-check"></i> যাচাই ও রেজিস্ট্রেশন`;
   if (userOTP !== generatedOTP) { alert('ভুল ওটিপি!'); return; }
+  
   toggleLoading('btnVerifyOTP', true, dft);
   createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.password)
   .then(async (uc) => {
@@ -150,30 +155,39 @@ function showMainApp() {
   document.getElementById('adminApprovalsMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   document.getElementById('editUsersMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   switchSubView('dashboard');
-  // re-bind nav links (remove old ones to avoid duplication)
+  
+  // Re-bind nav links
   document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
-    link.replaceWith(link.cloneNode(true)); // remove previous listeners
+    link.replaceWith(link.cloneNode(true));
   });
   document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      const vid = link.getAttribute('data-view');
-      switchSubView(vid);
+      switchSubView(link.getAttribute('data-view'));
       document.querySelectorAll('.nav-menu li a').forEach(l => l.classList.remove('active'));
       link.classList.add('active');
     });
   });
+
+  // Re-bind Logout button (Fixed Duplicate Listener bug)
+  const btnLogout = document.getElementById('btnLogout');
+  btnLogout.replaceWith(btnLogout.cloneNode(true));
   document.getElementById('btnLogout').addEventListener('click', async () => {
     await signOut(auth);
     mainAppView.style.display = 'none'; mainAppView.classList.remove('active');
     switchAuthView(loginView);
     currentUser = { uid:null, email:null, name:null, role:'user', status:null };
   });
+
+  // Re-bind Update Password button (Fixed Duplicate Listener bug)
+  const btnUpdatePass = document.getElementById('btnUpdatePassword');
+  btnUpdatePass.replaceWith(btnUpdatePass.cloneNode(true));
   document.getElementById('btnUpdatePassword').addEventListener('click', () => {
     const np = document.getElementById('newPass').value, cp = document.getElementById('confirmNewPass').value;
     if (!np || !cp) { alert('উভয় ঘর পূরণ করুন।'); return; }
     if (np.length<6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষর।'); return; }
     if (np!==cp) { alert('পাসওয়ার্ড মেলেনি।'); return; }
+    
     toggleLoading('btnUpdatePassword', true, `<i class="fas fa-floppy-disk"></i> আপডেট`);
     updatePassword(auth.currentUser, np).then(() => {
       toggleLoading('btnUpdatePassword', false, `<i class="fas fa-floppy-disk"></i> আপডেট`);
@@ -188,7 +202,6 @@ function switchSubView(vid) {
   const target = document.getElementById(vid + '-view');
   if (target) {
     target.classList.add('active');
-    console.log("View:", vid);
     if (vid==='customerList') initCustomerList();
     else if (vid==='addCustomer') initAddCustomerForm();
     else if (vid==='editUsers') loadEditUsers();
@@ -216,26 +229,26 @@ function loadCustomerTable() {
     const customers = snap.val();
     container.innerHTML = '';
     if (!customers) { container.innerHTML='<p class="empty-message">কোনো কাস্টমার নেই।</p>'; return; }
-    let filtered;
-    if (currentUser.role === 'admin') {
-      filtered = Object.entries(customers);
-    } else {
-      filtered = Object.entries(customers).filter(([_, c]) => {
-        if (!c.salesEmails) return false;
-        const emails = Array.isArray(c.salesEmails) ? c.salesEmails : c.salesEmails.split(',').map(e=>e.trim());
-        return emails.includes(currentUser.email);
-      });
-    }
+    
+    let filtered = currentUser.role === 'admin' ? Object.entries(customers) : Object.entries(customers).filter(([_, c]) => {
+      if (!c.salesEmails) return false;
+      const emails = Array.isArray(c.salesEmails) ? c.salesEmails : c.salesEmails.split(',').map(e=>e.trim());
+      return emails.includes(currentUser.email);
+    });
+
     if (filtered.length===0) { container.innerHTML='<p class="empty-message">কোনো কাস্টমার নেই।</p>'; return; }
+    
     const table = document.createElement('table'); table.className='data-table';
     table.innerHTML = `<thead><tr><th>Code</th><th>Name</th><th>Warehouse</th><th>Unit</th><th>Line</th><th>Region</th><th>Area</th><th>Point</th><th>ERP Code</th>${currentUser.role==='admin'?'<th>Action</th>':''}</tr></thead><tbody></tbody>`;
     const tbody = table.querySelector('tbody');
+    
     filtered.forEach(([key, cust])=> {
       const r = document.createElement('tr');
       r.innerHTML = `<td>${cust.customerCode||''}</td><td>${cust.customerName||''}</td><td>${cust.warehouse||''}</td><td>${cust.unit||''}</td><td>${cust.line||''}</td><td>${cust.region||''}</td><td>${cust.area||''}</td><td>${cust.point||''}</td><td>${cust.erpCode||''}</td>${currentUser.role==='admin'?`<td><button class="btn-edit edit-cust-btn" data-id="${key}">এডিট</button> <button class="btn-delete delete-cust-btn" data-id="${key}">ডিলিট</button></td>`:''}`;
       tbody.appendChild(r);
     });
     container.appendChild(table);
+    
     if (currentUser.role==='admin') {
       document.querySelectorAll('.edit-cust-btn').forEach(b => b.addEventListener('click', () => editCustomer(b.dataset.id, customers[b.dataset.id])));
       document.querySelectorAll('.delete-cust-btn').forEach(b => b.addEventListener('click', () => {
@@ -274,27 +287,43 @@ function clearCustomerForm() {
 
 function initAddCustomerForm() {
   const unitSel = document.getElementById('custUnit');
-  unitSel.replaceWith(unitSel.cloneNode(true)); // remove old listener
+  unitSel.replaceWith(unitSel.cloneNode(true));
   document.getElementById('custUnit').addEventListener('change', ()=> updateLineDropdown('custUnit','custLine'));
+  
   document.getElementById('btnSaveCustomer').replaceWith(document.getElementById('btnSaveCustomer').cloneNode(true));
   document.getElementById('btnSaveCustomer').onclick = saveCustomer;
+  
   document.getElementById('btnCancelCustomerEdit').replaceWith(document.getElementById('btnCancelCustomerEdit').cloneNode(true));
   document.getElementById('btnCancelCustomerEdit').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
+  
   document.getElementById('btnBackToCustomerList').replaceWith(document.getElementById('btnBackToCustomerList').cloneNode(true));
   document.getElementById('btnBackToCustomerList').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
-  // CSV
+  
+  // CSV Handlers (Fixed Syntax and Reset bugs)
   const csvArea = document.getElementById('csvUploadArea');
   csvArea.replaceWith(csvArea.cloneNode(true));
   const newCsvArea = document.getElementById('csvUploadArea');
   const csvInput = document.getElementById('csvFileInput');
+  
   newCsvArea.addEventListener('click', ()=> csvInput.click());
   newCsvArea.addEventListener('dragover', e=>{ e.preventDefault(); newCsvArea.style.borderColor='#2a5298'; });
-  newCsvArea.addEventListener('dragleave', ()=> newCsvArea.style.borderColor='#94a3b8';);
+  newCsvArea.addEventListener('dragleave', ()=> { newCsvArea.style.borderColor='#94a3b8'; }); // Syntax Error Fixed here
+  
   newCsvArea.addEventListener('drop', e=>{
     e.preventDefault(); newCsvArea.style.borderColor='#94a3b8';
-    if (e.dataTransfer.files.length) { csvInput.files = e.dataTransfer.files; handleCSV(e.dataTransfer.files[0]); }
+    if (e.dataTransfer.files.length) { 
+        csvInput.files = e.dataTransfer.files; 
+        handleCSV(e.dataTransfer.files[0]); 
+    }
   });
-  csvInput.addEventListener('change', e=>{ if(e.target.files.length) handleCSV(e.target.files[0]); });
+  
+  csvInput.addEventListener('change', e=>{ 
+      if(e.target.files.length) {
+          handleCSV(e.target.files[0]); 
+          e.target.value = ''; // Reset fixed here
+      }
+  });
+  
   document.getElementById('btnUploadCSV').replaceWith(document.getElementById('btnUploadCSV').cloneNode(true));
   document.getElementById('btnUploadCSV').addEventListener('click', uploadCSV);
 }
@@ -311,10 +340,14 @@ function saveCustomer() {
   const point = document.getElementById('custPoint').value.trim();
   const erp = document.getElementById('custErpCode').value.trim();
   const emailsRaw = document.getElementById('custSalesEmails').value.trim();
+  
   if (!code||!name||!warehouse||!unit||!line||!region||!area||!emailsRaw) { alert('আবশ্যক ক্ষেত্র পূরণ করুন।'); return; }
+  
   const emails = emailsRaw.split(',').map(e=>e.trim()).filter(e=>e);
   if (!emails.length) { alert('ইমেইল দিন।'); return; }
+  
   const data = { customerCode:code, customerName:name, warehouse, unit, line, region, area, point:point||'', erpCode:erp||'', salesEmails:emails, updatedAt: new Date().toISOString() };
+  
   if (id) {
     data.updatedBy = currentUser.email;
     toggleLoading('btnSaveCustomer', true, `<i class="fas fa-save"></i> আপডেট`);
@@ -338,15 +371,19 @@ function handleCSV(file) {
   reader.onload = e => {
     const lines = e.target.result.split('\n').filter(l=>l.trim());
     if (lines.length<2) { alert('অন্তত একটি ডাটা রো দরকার।'); return; }
+    
     const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
     const req = ['customercode','customername','warehouse','unit','line','region','area','salesemails'];
     if (req.some(r=>!headers.includes(r))) { alert('কলাম missing: '+req.filter(r=>!headers.includes(r)).join(', ')); return; }
+    
     csvData = [];
     for (let i=1; i<lines.length; i++) {
       const cols = lines[i].split(',').map(c=>c.trim());
       if (cols.length<headers.length) continue;
+      
       const obj = {}; headers.forEach((h,idx)=> obj[h]=cols[idx]);
       if (!obj.customercode||!obj.customername||!obj.warehouse||!obj.unit||!obj.line||!obj.region||!obj.area||!obj.salesemails) continue;
+      
       obj.salesemails = obj.salesemails.split(';').map(e=>e.trim()).filter(e=>e);
       csvData.push(obj);
     }
@@ -355,15 +392,18 @@ function handleCSV(file) {
   };
   reader.readAsText(file);
 }
+
 async function uploadCSV() {
   if (!csvData.length) return;
   toggleLoading('btnUploadCSV', true, `<i class="fas fa-upload"></i> ইম্পোর্ট`);
+  
   let ok=0, fail=0;
   for (const row of csvData) {
     const key = push(ref(database,'customers')).key;
     const data = { customerCode:row.customercode, customerName:row.customername, warehouse:row.warehouse, unit:row.unit, line:row.line, region:row.region, area:row.area, point:row.point||'', erpCode:row.erpcode||'', salesEmails:row.salesemails, createdBy:currentUser.email, createdAt:new Date().toISOString() };
     try { await set(ref(database,'customers/'+key), data); ok++; } catch(err) { fail++; }
   }
+  
   toggleLoading('btnUploadCSV', false, `<i class="fas fa-upload"></i> ইম্পোর্ট`);
   document.getElementById('csvStatus').innerText = `ইম্পোর্ট: ${ok} সফল, ${fail} ব্যর্থ।`;
   csvData=[]; document.getElementById('btnUploadCSV').style.display='none'; document.getElementById('csvPreview').innerHTML='';
@@ -375,14 +415,17 @@ function loadEditUsers() {
   onValue(ref(database,'users'), snap=>{
     const users = snap.val(); container.innerHTML='';
     if (!users) { container.innerHTML='<p class="empty-message">কোনো ইউজার নেই।</p>'; return; }
+    
     const table = document.createElement('table'); table.className='data-table';
     table.innerHTML = `<thead><tr><th>UID</th><th>নাম</th><th>ইমেইল</th><th>Enroll</th><th>Unit</th><th>Line</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody>`;
     const tbody = table.querySelector('tbody');
+    
     Object.entries(users).forEach(([uid,u])=> {
       const row = document.createElement('tr');
       row.innerHTML = `<td>${uid.substring(0,8)}...</td><td>${u.name}</td><td>${u.email}</td><td>${u.enroll}</td><td>${u.unit||''}</td><td>${u.line||''}</td><td>${u.status}</td><td><button class="btn-edit edit-user-btn" data-uid="${uid}">এডিট</button> <button class="btn-delete delete-user-btn" data-uid="${uid}">ডিলিট</button></td>`;
       tbody.appendChild(row);
     });
+    
     container.appendChild(table);
     container.querySelectorAll('.edit-user-btn').forEach(b => b.addEventListener('click', ()=> showEditUserForm(b.dataset.uid, users[b.dataset.uid])));
     container.querySelectorAll('.delete-user-btn').forEach(b => b.addEventListener('click', ()=>{
@@ -390,6 +433,7 @@ function loadEditUsers() {
     }));
   });
 }
+
 function showEditUserForm(uid, user) {
   const container = document.getElementById('editUsersContainer');
   const div = document.createElement('div'); div.className='card';
@@ -401,6 +445,7 @@ function showEditUserForm(uid, user) {
       <div class="input-group"><label>Status</label><select id="editStatus"><option value="pending" ${user.status==='pending'?'selected':''}>Pending</option><option value="approved" ${user.status==='approved'?'selected':''}>Approved</option><option value="rejected" ${user.status==='rejected'?'selected':''}>Rejected</option></select></div>
     </div>
     <div class="btn-row"><button class="btn btn-primary" id="btnUpdateUser">আপডেট</button><button class="btn btn-link" id="btnCancelEdit">বাতিল</button></div>`;
+  
   container.innerHTML=''; container.appendChild(div);
   document.getElementById('editUnit').addEventListener('change', function() { const sel=document.getElementById('editLine'); sel.innerHTML=''; (unitLines[this.value]||[]).forEach(l=>{ const o=document.createElement('option'); o.value=l; o.text=l; sel.appendChild(o); }); });
   document.getElementById('btnCancelEdit').addEventListener('click', ()=> loadEditUsers());
@@ -416,10 +461,12 @@ function loadPendingUsers() {
   onValue(ref(database,'users'), snap=>{
     const users = snap.val(); container.innerHTML='';
     if (!users) { container.innerHTML='<p class="empty-message">কোনো ইউজার নেই।</p>'; return; }
+    
     let found=false;
     const table = document.createElement('table'); table.className='data-table';
     table.innerHTML = `<thead><tr><th>নাম</th><th>ইমেইল</th><th>Enroll</th><th>Unit</th><th>Line</th><th>Action</th></tr></thead><tbody></tbody>`;
     const tbody=table.querySelector('tbody');
+    
     Object.entries(users).forEach(([uid,u])=>{
       if (u.status==='pending') { found=true;
         const row=document.createElement('tr');
@@ -427,6 +474,7 @@ function loadPendingUsers() {
         tbody.appendChild(row);
       }
     });
+    
     if (!found) { container.innerHTML='<p class="empty-message">কোনো পেন্ডিং ইউজার নেই।</p>'; return; }
     container.appendChild(table);
     container.querySelectorAll('.btn-approve').forEach(b=> b.addEventListener('click', async e=>{ await update(ref(database,'users/'+e.target.dataset.uid),{status:'approved'}); alert('অনুমোদিত'); }));
