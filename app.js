@@ -111,28 +111,9 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   console.log("OTP:", generatedOTP);
   toggleLoading('btnSendOTP', true, dft);
-
-  // OPTIMIZED: Text/plain content-type prevent cross-origin preflight locks smoothly
-  fetch(appsScriptURL, { 
-    method: "POST", 
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-    body: JSON.stringify({ to_email: email, to_name: name, otp_code: generatedOTP, type: "REGISTRATION" }) 
-  })
-  .then(res => res.json())
-  .then((resData) => { 
-    toggleLoading('btnSendOTP', false, dft); 
-    if(resData.success) {
-      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`; 
-      switchAuthView(otpView); 
-    } else {
-      alert('ওটিপি পাঠাতে ব্যর্থ: ' + resData.message);
-    }
-  })
-  .catch(err => { 
-    toggleLoading('btnSendOTP', false, dft); 
-    alert('ওটিপি সার্ভারে রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে।'); 
-    console.error(err); 
-  });
+  fetch(appsScriptURL, { method:"POST", mode:"no-cors", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ to_email:email, to_name:name, otp_code:generatedOTP, type:"REGISTRATION" }) })
+  .then(() => { toggleLoading('btnSendOTP', false, dft); document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`; switchAuthView(otpView); })
+  .catch(err => { toggleLoading('btnSendOTP', false, dft); alert('ওটিপি পাঠাতে সমস্যা।'); console.error(err); });
 });
 
 document.getElementById('btnVerifyOTP').addEventListener('click', () => {
@@ -170,6 +151,7 @@ function showMainApp() {
   document.getElementById('editUsersMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   switchSubView('dashboard');
   
+  // re-bind nav links
   document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
     link.replaceWith(link.cloneNode(true));
   });
@@ -182,12 +164,14 @@ function showMainApp() {
       link.classList.add('active');
     });
   });
+  
   document.getElementById('btnLogout').addEventListener('click', async () => {
     await signOut(auth);
     mainAppView.style.display = 'none'; mainAppView.classList.remove('active');
     switchAuthView(loginView);
     currentUser = { uid:null, email:null, name:null, role:'user', status:null };
   });
+  
   document.getElementById('btnUpdatePassword').addEventListener('click', () => {
     const np = document.getElementById('newPass').value, cp = document.getElementById('confirmNewPass').value;
     if (!np || !cp) { alert('উভয় ঘর পূরণ করুন।'); return; }
@@ -301,6 +285,7 @@ function initAddCustomerForm() {
   document.getElementById('btnCancelCustomerEdit').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
   document.getElementById('btnBackToCustomerList').replaceWith(document.getElementById('btnBackToCustomerList').cloneNode(true));
   document.getElementById('btnBackToCustomerList').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
+  
   // CSV
   const csvArea = document.getElementById('csvUploadArea');
   csvArea.replaceWith(csvArea.cloneNode(true));
@@ -308,10 +293,7 @@ function initAddCustomerForm() {
   const csvInput = document.getElementById('csvFileInput');
   newCsvArea.addEventListener('click', ()=> csvInput.click());
   newCsvArea.addEventListener('dragover', e=>{ e.preventDefault(); newCsvArea.style.borderColor='#2a5298'; });
-  
-  // FIX: Syntax Error Semicolon removed from here
-  newCsvArea.addEventListener('dragleave', () => { newCsvArea.style.borderColor='#94a3b8'; });
-  
+  newCsvArea.addEventListener('dragleave', ()=> { newCsvArea.style.borderColor='#94a3b8'; });
   newCsvArea.addEventListener('drop', e=>{
     e.preventDefault(); newCsvArea.style.borderColor='#94a3b8';
     if (e.dataTransfer.files.length) { csvInput.files = e.dataTransfer.files; handleCSV(e.dataTransfer.files[0]); }
@@ -456,5 +438,4 @@ function loadPendingUsers() {
     container.querySelectorAll('.btn-approve').forEach(b=> b.addEventListener('click', async e=>{ await update(ref(database,'users/'+e.target.dataset.uid),{status:'approved'}); alert('অনুমোদিত'); }));
     container.querySelectorAll('.btn-reject').forEach(b=> b.addEventListener('click', async e=>{ await update(ref(database,'users/'+e.target.dataset.uid),{status:'rejected'}); alert('বাতিল'); }));
   });
-}
 }
