@@ -6,7 +6,7 @@ import {
   updatePassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, get, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, update, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Firebase Config
 const firebaseConfig = {
@@ -27,7 +27,7 @@ const database = getDatabase(app);
 let generatedOTP = null;
 let tempRegistrationData = {};
 let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
-let csvData = []; // for CSV preview
+let csvData = [];
 
 // View switching for auth
 const loginView = document.getElementById('login-view');
@@ -277,8 +277,6 @@ function showMainApp() {
       });
   });
   
-  // Initialize customer list (if view is customerList)
-  // We'll load on switch
   if (currentUser.role === 'admin') {
     loadPendingUsers();
   }
@@ -290,7 +288,6 @@ function switchSubView(viewId) {
   if (target) {
     target.classList.add('active');
     console.log("Switched to sub-view:", viewId);
-    // Specific initializations
     if (viewId === 'customerList') {
       initCustomerList();
     } else if (viewId === 'addCustomer') {
@@ -329,7 +326,6 @@ function loadCustomerTable() {
       return;
     }
     
-    // Filter customers based on user's email (sales persons)
     const filtered = Object.entries(customers).filter(([key, cust]) => {
       if (!cust.salesEmails) return false;
       const emails = Array.isArray(cust.salesEmails) ? cust.salesEmails : cust.salesEmails.split(',').map(e => e.trim());
@@ -373,7 +369,6 @@ function loadCustomerTable() {
 
 // ---------- ADD CUSTOMER FORM ----------
 function initAddCustomerForm() {
-  // Unit change -> Line dropdown
   const unitSelect = document.getElementById('custUnit');
   const lineSelect = document.getElementById('custLine');
   unitSelect.addEventListener('change', () => {
@@ -507,7 +502,7 @@ function handleCSVFile(file) {
       if (!obj.customercode || !obj.customername || !obj.warehouse || !obj.unit || !obj.line || !obj.region || !obj.area || !obj.salesemails) {
         continue;
       }
-      obj.salesemails = obj.salesemails.split(';').map(e => e.trim()).filter(e => e); // support semicolon in CSV
+      obj.salesemails = obj.salesemails.split(';').map(e => e.trim()).filter(e => e);
       csvData.push(obj);
     }
     document.getElementById('csvPreview').innerHTML = `<p>${csvData.length} টি কাস্টমার পাওয়া গেছে।</p>`;
@@ -520,7 +515,6 @@ function handleCSVFile(file) {
 async function uploadCSV() {
   if (!csvData.length) return;
   toggleLoading('btnUploadCSV', true, `<i class="fas fa-upload"></i> CSV থেকে ইম্পোর্ট করুন`);
-  const updates = {};
   const customersRef = ref(database, 'customers');
   let success = 0, failed = 0;
   
@@ -555,7 +549,7 @@ async function uploadCSV() {
   document.getElementById('csvPreview').innerHTML = '';
 }
 
-// ---------- EDIT USERS (Admin) ----------
+// ---------- EDIT USERS (Admin) with Delete ----------
 function loadEditUsers() {
   const container = document.getElementById('editUsersContainer');
   const usersRef = ref(database, 'users');
@@ -585,7 +579,10 @@ function loadEditUsers() {
         <td>${user.salesLine}</td>
         <td>${user.unit}</td>
         <td>${user.status}</td>
-        <td><button class="btn-edit edit-user-btn" data-uid="${uid}">এডিট</button></td>
+        <td>
+          <button class="btn-edit edit-user-btn" data-uid="${uid}">এডিট</button>
+          <button class="btn-delete delete-user-btn" data-uid="${uid}">ডিলিট</button>
+        </td>
       `;
       tbody.appendChild(row);
     });
@@ -599,7 +596,32 @@ function loadEditUsers() {
         showEditUserForm(uid, user);
       });
     });
+    
+    // Delete button handlers
+    container.querySelectorAll('.delete-user-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.uid;
+        const userName = users[uid]?.name || 'এই ইউজার';
+        if (confirm(`আপনি কি নিশ্চিতভাবে "${userName}" কে ডিলিট করতে চান? এই কাজটি অপরিবর্তনীয়।`)) {
+          deleteUser(uid);
+        }
+      });
+    });
   });
+}
+
+function deleteUser(uid) {
+  console.log("Deleting user:", uid);
+  // Remove from Realtime Database
+  remove(ref(database, 'users/' + uid))
+    .then(() => {
+      alert('ইউজার সফলভাবে ডিলিট করা হয়েছে।');
+      // Note: Firebase Auth user deletion requires Admin SDK or cloud function, not possible from client side directly.
+      // For full deletion, you might need a backend service. Here we just remove from DB.
+    })
+    .catch(err => {
+      alert('ডিলিট করতে সমস্যা হয়েছে: ' + err.message);
+    });
 }
 
 function showEditUserForm(uid, user) {
