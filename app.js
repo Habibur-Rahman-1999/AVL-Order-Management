@@ -45,6 +45,9 @@ function updateLineDropdown(unitSelectId, lineSelectId) {
   }
 }
 
+// Attach unit change for registration
+document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
+
 // Auth views
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
@@ -68,9 +71,6 @@ function toggleLoading(btnId, loading, defaultHtml) {
   if (loading) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> প্রসেসিং...`; }
   else { btn.disabled = false; btn.innerHTML = defaultHtml; }
 }
-
-// Attach reg unit change
-document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
 
 // ---------- LOGIN ----------
 document.getElementById('btnLogin').addEventListener('click', () => {
@@ -192,7 +192,7 @@ function switchSubView(vid) {
   }
 }
 
-// ---------- CUSTOMER LIST (with admin edit/delete) ----------
+// ---------- CUSTOMER LIST (admin sees all, can edit/delete) ----------
 function initCustomerList() {
   const actionsDiv = document.getElementById('customerActions');
   actionsDiv.innerHTML = '';
@@ -232,7 +232,6 @@ function loadCustomerTable() {
       tbody.appendChild(r);
     });
     container.appendChild(table);
-    // Attach admin actions
     if (currentUser.role==='admin') {
       document.querySelectorAll('.edit-cust-btn').forEach(b => b.addEventListener('click', () => editCustomer(b.dataset.id, customers[b.dataset.id])));
       document.querySelectorAll('.delete-cust-btn').forEach(b => b.addEventListener('click', () => {
@@ -321,7 +320,7 @@ function saveCustomer() {
   }
 }
 
-// CSV functions (unchanged)
+// CSV functions
 function handleCSV(file) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -358,7 +357,7 @@ async function uploadCSV() {
   csvData=[]; document.getElementById('btnUploadCSV').style.display='none'; document.getElementById('csvPreview').innerHTML='';
 }
 
-// ---------- EDIT USERS (unchanged) ----------
+// ---------- EDIT USERS ----------
 function loadEditUsers() {
   const container = document.getElementById('editUsersContainer');
   onValue(ref(database,'users'), snap=>{
