@@ -360,6 +360,11 @@ body {
     color: white;
 }
 
+.btn-delete {
+    background: #e53e3e;
+    color: white;
+}
+
 .empty-message {
     text-align: center;
     color: #64748b;
