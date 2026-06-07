@@ -10,7 +10,6 @@
 </head>
 <body>
 
-    <!-- LOGIN VIEW -->
     <div id="login-view" class="auth-view active login-container">
         <div class="login-header">
             <div class="logo-icon-auth"><i class="fas fa-boxes-stacked"></i></div>
@@ -19,8 +18,8 @@
         </div>
         <form onsubmit="return false;">
             <div class="input-group">
-                <label>অফিশিয়াল ইমেইল</label> <!-- Changed from User ID / Email -->
-                <div class="input-wrapper"><i class="fas fa-envelope input-icon"></i><input type="email" id="loginEmail" required></div>
+                <label>ইউজার আইডি / ইমেইল</label>
+                <div class="input-wrapper"><i class="fas fa-user input-icon"></i><input type="text" id="loginEmail" required></div>
             </div>
             <div class="input-group">
                 <label>পাসওয়ার্ড</label>
@@ -33,9 +32,8 @@
         </form>
     </div>
 
-    <!-- REGISTER VIEW -->
     <div id="register-view" class="auth-view login-container">
-        <div class="login-header"><h2>নিবন্ধন ফর্ম</h2><p>সঠিক তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন</p></div>
+        <div class="login-header"><h2>নিবন্ধন ফর্ম</h2><p>সких তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন</p></div>
         <form onsubmit="return false;">
             <div class="input-group"><label>Enroll ID</label><div class="input-wrapper"><i class="fas fa-id-card input-icon"></i><input type="text" id="regEnroll" required></div></div>
             <div class="input-group"><label>পূর্ণ নাম</label><div class="input-wrapper"><i class="fas fa-user-tag input-icon"></i><input type="text" id="regName" required></div></div>
@@ -72,7 +70,6 @@
         </form>
     </div>
 
-    <!-- OTP VIEW -->
     <div id="otp-view" class="auth-view login-container">
         <div class="login-header"><div class="logo-icon-auth" style="background:#e53e3e;"><i class="fas fa-shield-halved"></i></div><h2>ইমেইল ভেরিফিকেশন</h2><p id="otp-message">আপনার ইমেইলে ভেরিফিকেশন কোড পাঠানো হয়েছে</p></div>
         <form onsubmit="return false;">
@@ -84,7 +81,6 @@
         </form>
     </div>
 
-    <!-- MAIN APP -->
     <div id="main-app" class="auth-view main-app-container" style="display: none;">
         <nav class="top-navbar">
             <div class="nav-brand"><div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div></div>
