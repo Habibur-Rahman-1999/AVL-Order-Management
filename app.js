@@ -96,7 +96,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   }).catch(err => { toggleLoading('btnLogin', false, dft); alert('লগইন ব্যর্থ: ' + err.message); });
 });
 
-// ---------- REGISTRATION ----------
+// ---------- REGISTRATION (OTP SEND – CORS MODE) ----------
 document.getElementById('btnSendOTP').addEventListener('click', () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
@@ -111,9 +111,34 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   console.log("OTP:", generatedOTP);
   toggleLoading('btnSendOTP', true, dft);
-  fetch(appsScriptURL, { method:"POST", mode:"no-cors", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ to_email:email, to_name:name, otp_code:generatedOTP, type:"REGISTRATION" }) })
-  .then(() => { toggleLoading('btnSendOTP', false, dft); document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`; switchAuthView(otpView); })
-  .catch(err => { toggleLoading('btnSendOTP', false, dft); alert('ওটিপি পাঠাতে সমস্যা।'); console.error(err); });
+
+  // ✅ CORS mode – proper preflight + response handling
+  fetch(appsScriptURL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to_email: email,
+      to_name: name,
+      otp_code: generatedOTP,
+      type: "REGISTRATION"
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    toggleLoading('btnSendOTP', false, dft);
+    if (data.success) {
+      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`;
+      switchAuthView(otpView);
+    } else {
+      alert('ওটিপি পাঠাতে ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
+    }
+  })
+  .catch(err => {
+    toggleLoading('btnSendOTP', false, dft);
+    alert('ওটিপি পাঠাতে সমস্যা।');
+    console.error(err);
+  });
 });
 
 document.getElementById('btnVerifyOTP').addEventListener('click', () => {
