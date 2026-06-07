@@ -10,7 +10,7 @@
 </head>
 <body>
 
-    <!-- ========== AUTHENTICATION VIEWS ========== -->
+    <!-- ========== AUTH VIEWS ========== -->
     <div id="login-view" class="auth-view active login-container">
         <div class="login-header">
             <div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div>
@@ -73,16 +73,10 @@
                     <i class="fas fa-route input-icon"></i>
                     <select id="regSalesLine" required>
                         <option value="" disabled selected>সেলস লাইন সিলেক্ট করুন</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                        <option value="UHT">UHT</option>
-                        <option value="E">E</option>
-                        <option value="H">H</option>
-                        <option value="AG">AG</option>
-                        <option value="BC">BC</option>
-                        <option value="SP">SP</option>
+                        <option value="Beverage">Beverage</option>
+                        <option value="Food">Food</option>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Commodity">Commodity</option>
                     </select>
                 </div>
             </div>
@@ -92,12 +86,8 @@
                     <i class="fas fa-building input-icon"></i>
                     <select id="regUnit" required>
                         <option value="" disabled selected>ইউনিট সিলেক্ট করুন</option>
-                        <option value="ADL">Akij Dairy Ltd (ADL)</option>
+                        <option value="AVL">Akij Venture Ltd (AVL)</option>
                         <option value="AFBL">Akij Food & Beverage Ltd (AFBL)</option>
-                        <option value="AEEL">Akij Electrics & Electronics Ltd (AEEL)</option>
-                        <option value="AHHL">Akij Healthcare & Hygine Ltd (AHHL)</option>
-                        <option value="AALL">Akij Agro & Livestock Ltd (AALL)</option>
-                        <option value="ABEL">Akij Bicycle & Enginering Ltd (ABEL)</option>
                     </select>
                 </div>
             </div>
@@ -137,39 +127,131 @@
         </form>
     </div>
 
-    <!-- ========== MAIN APPLICATION VIEW (HIDDEN BY DEFAULT) ========== -->
+    <!-- ========== MAIN APPLICATION VIEW ========== -->
     <div id="main-app" class="auth-view main-app-container" style="display: none;">
         <nav class="top-navbar">
-            <div class="nav-brand">AVL System</div>
+            <div class="nav-brand">
+                <div class="logo-icon"><i class="fas fa-boxes-stacked"></i></div>
+                <!-- "AVL System" টেক্সট রিমুভ করা হয়েছে, শুধু আইকন থাকবে -->
+            </div>
             <ul class="nav-menu" id="navMenu">
                 <li><a data-view="dashboard" class="active">Dashboard</a></li>
                 <li><a data-view="orderForm">Order Form</a></li>
                 <li><a data-view="customerList">Customer List</a></li>
                 <li><a data-view="itemList">Item List</a></li>
                 <li><a data-view="resetPassword">Reset Password</a></li>
+                <li id="editUsersMenu" style="display:none;"><a data-view="editUsers">Edit Users</a></li>
                 <li id="adminApprovalsMenu" style="display:none;"><a data-view="userApprovals">User Approvals</a></li>
             </ul>
             <button id="btnLogout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </nav>
         <div class="main-content">
-            <!-- Sub-views -->
+            <!-- Dashboard -->
             <div id="dashboard-view" class="sub-view active">
                 <h2>ড্যাশবোর্ড</h2>
-                <p>স্বাগতম, <span id="loggedUserName"></span>! আপনি সফলভাবে লগইন করেছেন।</p>
-                <!-- ভবিষ্যতে পরিসংখ্যান যুক্ত করা যাবে -->
+                <p>স্বাগতম, <span id="loggedUserName"></span>!</p>
             </div>
+
+            <!-- Order Form (placeholder) -->
             <div id="orderForm-view" class="sub-view">
                 <h2>অর্ডার ফর্ম</h2>
-                <p>এই অংশটি শীঘ্রই সংযুক্ত করা হবে।</p>
+                <p>শীঘ্রই আসছে...</p>
             </div>
+
+            <!-- Customer List -->
             <div id="customerList-view" class="sub-view">
                 <h2>কাস্টমার তালিকা</h2>
-                <p>এখানে কাস্টমারদের তালিকা প্রদর্শিত হবে।</p>
+                <div id="customerActions" style="margin-bottom: 15px;"></div>
+                <div id="customerTableContainer"></div>
             </div>
+
+            <!-- Add Customer (hidden, navigated via button) -->
+            <div id="addCustomer-view" class="sub-view">
+                <h2>নতুন কাস্টমার যোগ করুন</h2>
+                <div class="inline-form" id="addCustomerForm">
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Customer Code</label>
+                            <input type="text" id="custCode" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Customer Name</label>
+                            <input type="text" id="custName" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Warehouse</label>
+                            <input type="text" id="custWarehouse" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Unit</label>
+                            <select id="custUnit" required>
+                                <option value="">সিলেক্ট করুন</option>
+                                <option value="AFBL">AFBL</option>
+                                <option value="ADL">ADL</option>
+                                <option value="AEEL">AEEL</option>
+                                <option value="AALL">AALL</option>
+                                <option value="AHHL">AHHL</option>
+                                <option value="ABEL">ABEL</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Line</label>
+                            <select id="custLine" required>
+                                <option value="">প্রথমে Unit সিলেক্ট করুন</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Region</label>
+                            <input type="text" id="custRegion" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Area</label>
+                            <input type="text" id="custArea" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Point</label>
+                            <input type="text" id="custPoint">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label>ERP Code</label>
+                            <input type="text" id="custErpCode">
+                        </div>
+                        <div class="input-group">
+                            <label>Sales Person Email(s) (কমা দিয়ে আলাদা করুন)</label>
+                            <input type="text" id="custSalesEmails" placeholder="email1@akij.com, email2@akij.com" required>
+                        </div>
+                    </div>
+                    <button type="button" id="btnSaveCustomer" class="btn btn-primary"><i class="fas fa-save"></i> সেভ করুন</button>
+                    <button type="button" id="btnBackToCustomerList" class="btn btn-link" style="width:auto;"><i class="fas fa-arrow-left"></i> তালিকায় ফিরুন</button>
+                </div>
+
+                <hr style="margin: 25px 0;">
+                <h3>অথবা CSV আপলোড করে একাধিক কাস্টমার যোগ করুন</h3>
+                <div class="upload-area" id="csvUploadArea">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 30px; color: #2a5298;"></i>
+                    <p>CSV ফাইলটি এখানে ড্রাগ করুন অথবা ক্লিক করুন</p>
+                    <input type="file" id="csvFileInput" accept=".csv">
+                </div>
+                <div id="csvPreview" style="margin-top: 15px;"></div>
+                <button type="button" id="btnUploadCSV" class="btn btn-success" style="display:none;"><i class="fas fa-upload"></i> CSV থেকে ইম্পোর্ট করুন</button>
+                <div id="csvStatus" style="margin-top: 10px;"></div>
+            </div>
+
+            <!-- Item List (placeholder) -->
             <div id="itemList-view" class="sub-view">
                 <h2>আইটেম তালিকা</h2>
-                <p>সকল আইটেম এখানে দেখানো হবে।</p>
+                <p>আইটেম এখানে আসবে...</p>
             </div>
+
+            <!-- Reset Password -->
             <div id="resetPassword-view" class="sub-view">
                 <h2>পাসওয়ার্ড রিসেট</h2>
                 <form onsubmit="return false;">
@@ -192,6 +274,14 @@
                     </div>
                 </form>
             </div>
+
+            <!-- Edit Users (Admin only) -->
+            <div id="editUsers-view" class="sub-view">
+                <h2>ইউজার এডিট</h2>
+                <div id="editUsersContainer">লোড হচ্ছে...</div>
+            </div>
+
+            <!-- User Approvals (Admin) -->
             <div id="userApprovals-view" class="sub-view">
                 <h2>ইউজার অনুমোদন (Pending Approvals)</h2>
                 <div id="pendingUsersContainer">লোড হচ্ছে...</div>

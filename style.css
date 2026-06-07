@@ -1,6 +1,4 @@
-/* ========== MERGED CSS: Base from first block + essential additions from second block ========== */
-
-/* Reset & Typography Base (combined from both sources, using full font stack) */
+/* ========== MERGED CSS: Base from first block + essential additions ========== */
 * {
     margin: 0;
     padding: 0;
@@ -17,7 +15,6 @@ body {
     padding: 20px;
 }
 
-/* Glassmorphism Wrapper Dynamic Layout */
 .login-container {
     background: rgba(255, 255, 255, 0.98);
     width: 100%;
@@ -29,10 +26,9 @@ body {
     overflow: hidden;
 }
 
-/* ---------- MAIN APPLICATION WRAPPER ---------- */
 .main-app-container {
     width: 100%;
-    max-width: 1000px;
+    max-width: 1200px;
     background: rgba(255,255,255,0.96);
     border-radius: 16px;
     box-shadow: 0 15px 35px rgba(0,0,0,0.5);
@@ -57,6 +53,22 @@ body {
     padding: 15px 20px 15px 0;
     border-right: 1px solid rgba(255,255,255,0.3);
     margin-right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-brand .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ff9900, #ff5500);
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    box-shadow: 0 3px 8px rgba(255,85,0,0.3);
 }
 
 .nav-menu {
@@ -111,7 +123,7 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-/* ---------- AUTH VIEWS (Login, Register, OTP) ---------- */
+/* ---------- AUTH VIEWS ---------- */
 .auth-view {
     display: none;
 }
@@ -126,7 +138,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Top Header Component */
 .login-header {
     text-align: center;
     margin-bottom: 25px;
@@ -159,7 +170,6 @@ body {
     margin-top: 4px;
 }
 
-/* Custom Structure Form Fields */
 .input-group {
     margin-bottom: 16px;
 }
@@ -185,8 +195,7 @@ body {
     font-size: 14px;
 }
 
-/* General input/select styling */
-.input-wrapper input, 
+.input-wrapper input,
 .input-wrapper select {
     width: 100%;
     padding: 12px 15px 12px 42px;
@@ -200,7 +209,6 @@ body {
     appearance: none;
 }
 
-/* Password fields need extra right padding for the toggle icon */
 .input-wrapper input[type="password"] {
     padding-right: 40px;
 }
@@ -213,25 +221,23 @@ body {
     cursor: pointer;
 }
 
-.input-wrapper input:focus, 
+.input-wrapper input:focus,
 .input-wrapper select:focus {
     border-color: #2a5298;
     background-color: #fff;
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
-/* Toggle password visibility icon (added from second CSS) */
 .toggle-icon {
     position: absolute;
     right: 12px;
     cursor: pointer;
     color: #64748b;
     font-size: 15px;
-    pointer-events: auto; /* ensure clickable */
+    pointer-events: auto;
     z-index: 2;
 }
 
-/* Flexible Premium Action Buttons */
 .action-buttons {
     display: flex;
     flex-direction: column;
@@ -293,7 +299,6 @@ body {
     filter: brightness(0.95);
 }
 
-/* Loading & Disabled Button State Architecture */
 .btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
@@ -302,39 +307,42 @@ body {
     pointer-events: none;
 }
 
-/* ---------- TABLE STYLES FOR APPROVALS ---------- */
-.approval-table {
+/* ---------- TABLE STYLES ---------- */
+.data-table {
     width: 100%;
     border-collapse: collapse;
     background: white;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-top: 20px;
 }
 
-.approval-table th, .approval-table td {
-    padding: 12px 15px;
+.data-table th, .data-table td {
+    padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
 }
 
-.approval-table th {
+.data-table th {
     background: #1e3c72;
     color: white;
     font-weight: 600;
 }
 
-.approval-table tr:last-child td {
+.data-table tr:last-child td {
     border-bottom: none;
 }
 
-.approval-table button {
-    padding: 6px 14px;
+.data-table button {
+    padding: 5px 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
-    margin-right: 5px;
+    font-size: 12px;
+    margin: 2px;
 }
 
 .btn-approve {
@@ -347,11 +355,62 @@ body {
     color: white;
 }
 
+.btn-edit {
+    background: #3182ce;
+    color: white;
+}
+
 .empty-message {
     text-align: center;
     color: #64748b;
     padding: 30px;
     font-style: italic;
+}
+
+/* ---------- FORM INLINE STYLES ---------- */
+.inline-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.inline-form h3 {
+    color: #1e3c72;
+    margin-bottom: 5px;
+}
+
+.row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.row .input-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.upload-area {
+    border: 2px dashed #a0aec0;
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    background: #f7fafc;
+    transition: 0.2s;
+}
+
+.upload-area:hover {
+    border-color: #2a5298;
+}
+
+.upload-area input[type="file"] {
+    display: none;
 }
 
 @media (max-width: 480px) {
