@@ -45,7 +45,7 @@ function updateLineDropdown(unitSelectId, lineSelectId) {
   }
 }
 
-// Attach unit change for registration
+// Attach unit change for registration (no need to add again later)
 document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
 
 // Auth views
@@ -150,6 +150,10 @@ function showMainApp() {
   document.getElementById('adminApprovalsMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   document.getElementById('editUsersMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   switchSubView('dashboard');
+  // re-bind nav links (remove old ones to avoid duplication)
+  document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
+    link.replaceWith(link.cloneNode(true)); // remove previous listeners
+  });
   document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -192,7 +196,7 @@ function switchSubView(vid) {
   }
 }
 
-// ---------- CUSTOMER LIST (admin sees all, can edit/delete) ----------
+// ---------- CUSTOMER LIST ----------
 function initCustomerList() {
   const actionsDiv = document.getElementById('customerActions');
   actionsDiv.innerHTML = '';
@@ -269,21 +273,29 @@ function clearCustomerForm() {
 }
 
 function initAddCustomerForm() {
+  const unitSel = document.getElementById('custUnit');
+  unitSel.replaceWith(unitSel.cloneNode(true)); // remove old listener
   document.getElementById('custUnit').addEventListener('change', ()=> updateLineDropdown('custUnit','custLine'));
+  document.getElementById('btnSaveCustomer').replaceWith(document.getElementById('btnSaveCustomer').cloneNode(true));
   document.getElementById('btnSaveCustomer').onclick = saveCustomer;
+  document.getElementById('btnCancelCustomerEdit').replaceWith(document.getElementById('btnCancelCustomerEdit').cloneNode(true));
   document.getElementById('btnCancelCustomerEdit').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
+  document.getElementById('btnBackToCustomerList').replaceWith(document.getElementById('btnBackToCustomerList').cloneNode(true));
   document.getElementById('btnBackToCustomerList').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
   // CSV
   const csvArea = document.getElementById('csvUploadArea');
+  csvArea.replaceWith(csvArea.cloneNode(true));
+  const newCsvArea = document.getElementById('csvUploadArea');
   const csvInput = document.getElementById('csvFileInput');
-  csvArea.addEventListener('click', ()=> csvInput.click());
-  csvArea.addEventListener('dragover', e=>{ e.preventDefault(); csvArea.style.borderColor='#2a5298'; });
-  csvArea.addEventListener('dragleave', ()=> csvArea.style.borderColor='#94a3b8';);
-  csvArea.addEventListener('drop', e=>{
-    e.preventDefault(); csvArea.style.borderColor='#94a3b8';
+  newCsvArea.addEventListener('click', ()=> csvInput.click());
+  newCsvArea.addEventListener('dragover', e=>{ e.preventDefault(); newCsvArea.style.borderColor='#2a5298'; });
+  newCsvArea.addEventListener('dragleave', ()=> newCsvArea.style.borderColor='#94a3b8';);
+  newCsvArea.addEventListener('drop', e=>{
+    e.preventDefault(); newCsvArea.style.borderColor='#94a3b8';
     if (e.dataTransfer.files.length) { csvInput.files = e.dataTransfer.files; handleCSV(e.dataTransfer.files[0]); }
   });
   csvInput.addEventListener('change', e=>{ if(e.target.files.length) handleCSV(e.target.files[0]); });
+  document.getElementById('btnUploadCSV').replaceWith(document.getElementById('btnUploadCSV').cloneNode(true));
   document.getElementById('btnUploadCSV').addEventListener('click', uploadCSV);
 }
 
