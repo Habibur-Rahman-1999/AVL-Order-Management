@@ -63,7 +63,7 @@ function switchAuthView(view) {
   view.classList.add('active');
 }
 
-const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
+const appsScriptURL = "https://script.google.com/macros/s/AKfycbzh2R1mXfRtjD0ObjbAQVNsiZsacrkW--oxV0wGUnjCU1ZaPrORx9kn8TIZbYksH1XaCQ/exec";
 
 function toggleLoading(btnId, loading, defaultHtml) {
   const btn = document.getElementById(btnId);
