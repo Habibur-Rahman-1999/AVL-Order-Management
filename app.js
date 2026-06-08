@@ -16,13 +16,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
-// Global state
 let generatedOTP = null;
 let tempRegistrationData = {};
 let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
 let csvData = [];
 
-// Unit-Line mapping
 const unitLines = {
   'AFBL': ['A','B','C'],
   'ADL': ['D','UHT'],
@@ -45,10 +43,8 @@ function updateLineDropdown(unitSelectId, lineSelectId) {
   }
 }
 
-// Attach unit change for registration
 document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
 
-// Auth views
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
 const otpView = document.getElementById('otp-view');
@@ -81,7 +77,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   toggleLoading('btnLogin', true, dft);
   signInWithEmailAndPassword(auth, email, password).then(async (uc) => {
     const user = uc.user;
-    console.log("Logged in:", user.uid);
     const snap = await get(ref(database, 'users/' + user.uid));
     if (!snap.exists()) { await signOut(auth); toggleLoading('btnLogin', false, dft); alert('অ্যাকাউন্ট পাওয়া যায়নি।'); return; }
     const userData = snap.val();
@@ -90,14 +85,13 @@ document.getElementById('btnLogin').addEventListener('click', () => {
     const admins = adminsSnap.val() || {};
     const isAdmin = admins[email.replace(/\./g, '_')] === true;
     currentUser = { uid: user.uid, email: user.email, name: userData.name, role: isAdmin ? 'admin' : 'user', status: userData.status };
-    console.log("Current user:", currentUser);
     toggleLoading('btnLogin', false, dft);
     showMainApp();
   }).catch(err => { toggleLoading('btnLogin', false, dft); alert('লগইন ব্যর্থ: ' + err.message); });
 });
 
 // ---------- REGISTRATION OTP SEND (FIXED) ----------
-document.getElementById('btnSendOTP').addEventListener('click', () => {
+document.getElementById('btnSendOTP').addEventListener('click', async () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -105,36 +99,39 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   const line = document.getElementById('regLine').value;
   const password = document.getElementById('regPassword').value;
   const dft = `<i class="fas fa-paper-plane"></i> ওটিপি পাঠান`;
+  
   if (!enroll || !name || !email || !unit || !line || !password) { alert('সকল ঘর পূরণ করুন।'); return; }
   if (password.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষর।'); return; }
+  
   tempRegistrationData = { enroll, name, email, unit, line, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   console.log("Generated OTP:", generatedOTP);
   toggleLoading('btnSendOTP', true, dft);
 
-  // ✅ no-cors + text/plain → Apps Script-এ রিকোয়েস্ট পৌঁছাবে এবং ইমেইল পাঠাবে
-  fetch(appsScriptURL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({
-      to_email: email,
-      to_name: name,
-      otp_code: generatedOTP,
-      type: "REGISTRATION"
-    })
-  })
-  .then(() => {
-    // no-cors মোডে রেসপন্স opaque, আমরা সফল ধরে নিচ্ছি
+  try {
+    const response = await fetch(appsScriptURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "REGISTRATION",
+        to_email: email,
+        to_name: name,
+        otp_code: generatedOTP
+      })
+    });
+    const result = await response.json();
+    if (result.success) {
+      toggleLoading('btnSendOTP', false, dft);
+      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`;
+      switchAuthView(otpView);
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (err) {
     toggleLoading('btnSendOTP', false, dft);
-    document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`;
-    switchAuthView(otpView);
-  })
-  .catch(err => {
-    toggleLoading('btnSendOTP', false, dft);
-    alert('ওটিপি পাঠাতে সমস্যা।');
+    alert('ওটিপি পাঠাতে সমস্যা: ' + err.message);
     console.error(err);
-  });
+  }
 });
 
 // ---------- VERIFY OTP & REGISTER ----------
@@ -164,7 +161,7 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
   }).catch(err => { toggleLoading('btnVerifyOTP', false, dft); alert('রেজিস্ট্রেশন ব্যর্থ: ' + err.message); });
 });
 
-// ---------- MAIN APP ----------
+// ---------- MAIN APP (unchanged) ----------
 function showMainApp() {
   document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
   mainAppView.style.display = 'flex'; mainAppView.classList.add('active');
@@ -173,7 +170,6 @@ function showMainApp() {
   document.getElementById('editUsersMenu').style.display = currentUser.role==='admin' ? 'block' : 'none';
   switchSubView('dashboard');
   
-  // re-bind nav links
   document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
     link.replaceWith(link.cloneNode(true));
   });
@@ -213,7 +209,6 @@ function switchSubView(vid) {
   const target = document.getElementById(vid + '-view');
   if (target) {
     target.classList.add('active');
-    console.log("View:", vid);
     if (vid==='customerList') initCustomerList();
     else if (vid==='addCustomer') initAddCustomerForm();
     else if (vid==='editUsers') loadEditUsers();
@@ -221,7 +216,7 @@ function switchSubView(vid) {
   }
 }
 
-// ---------- CUSTOMER LIST ----------
+// ---------- CUSTOMER LIST (unchanged from original except for minor fixes) ----------
 function initCustomerList() {
   const actionsDiv = document.getElementById('customerActions');
   actionsDiv.innerHTML = '';
@@ -308,7 +303,6 @@ function initAddCustomerForm() {
   document.getElementById('btnBackToCustomerList').replaceWith(document.getElementById('btnBackToCustomerList').cloneNode(true));
   document.getElementById('btnBackToCustomerList').onclick = ()=> { clearCustomerForm(); switchSubView('customerList'); };
   
-  // CSV
   const csvArea = document.getElementById('csvUploadArea');
   csvArea.replaceWith(csvArea.cloneNode(true));
   const newCsvArea = document.getElementById('csvUploadArea');
@@ -358,7 +352,6 @@ function saveCustomer() {
   }
 }
 
-// CSV functions
 function handleCSV(file) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -396,7 +389,6 @@ async function uploadCSV() {
   csvData=[]; document.getElementById('btnUploadCSV').style.display='none'; document.getElementById('csvPreview').innerHTML='';
 }
 
-// ---------- EDIT USERS ----------
 function loadEditUsers() {
   const container = document.getElementById('editUsersContainer');
   onValue(ref(database,'users'), snap=>{
@@ -438,7 +430,6 @@ function showEditUserForm(uid, user) {
   });
 }
 
-// ---------- USER APPROVALS ----------
 function loadPendingUsers() {
   const container = document.getElementById('pendingUsersContainer');
   onValue(ref(database,'users'), snap=>{
