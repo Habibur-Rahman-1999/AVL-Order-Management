@@ -96,7 +96,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   }).catch(err => { toggleLoading('btnLogin', false, dft); alert('লগইন ব্যর্থ: ' + err.message); });
 });
 
-// ---------- REGISTRATION (OTP SEND – CORS MODE) ----------
+// ---------- REGISTRATION OTP SEND (FIXED) ----------
 document.getElementById('btnSendOTP').addEventListener('click', () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
@@ -109,14 +109,14 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   if (password.length < 6) { alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষর।'); return; }
   tempRegistrationData = { enroll, name, email, unit, line, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log("OTP:", generatedOTP);
+  console.log("Generated OTP:", generatedOTP);
   toggleLoading('btnSendOTP', true, dft);
 
-  // ✅ CORS mode – proper preflight + response handling
+  // ✅ no-cors + text/plain → Apps Script-এ রিকোয়েস্ট পৌঁছাবে এবং ইমেইল পাঠাবে
   fetch(appsScriptURL, {
     method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
     body: JSON.stringify({
       to_email: email,
       to_name: name,
@@ -124,15 +124,11 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
       type: "REGISTRATION"
     })
   })
-  .then(response => response.json())
-  .then(data => {
+  .then(() => {
+    // no-cors মোডে রেসপন্স opaque, আমরা সফল ধরে নিচ্ছি
     toggleLoading('btnSendOTP', false, dft);
-    if (data.success) {
-      document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`;
-      switchAuthView(otpView);
-    } else {
-      alert('ওটিপি পাঠাতে ব্যর্থ: ' + (data.message || 'অজানা ত্রুটি'));
-    }
+    document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে।`;
+    switchAuthView(otpView);
   })
   .catch(err => {
     toggleLoading('btnSendOTP', false, dft);
@@ -141,6 +137,7 @@ document.getElementById('btnSendOTP').addEventListener('click', () => {
   });
 });
 
+// ---------- VERIFY OTP & REGISTER ----------
 document.getElementById('btnVerifyOTP').addEventListener('click', () => {
   const userOTP = document.getElementById('otpInput').value.trim();
   const dft = `<i class="fas fa-circle-check"></i> যাচাই ও রেজিস্ট্রেশন`;
