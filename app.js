@@ -76,7 +76,7 @@ function toggleLoading(buttonId, isProcessing, defaultHtml) {
 }
 
 // আপনার লাইভ গুগল অ্যাপস স্ক্রিপ্ট ওয়েব অ্যাপ ইউআরএল
-const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
+const appsScriptURL = "https://script.google.com/macros/s/AKfycby4WFu5qoOuYFfiFFC1oDuHFQR2aVMZj4mBdBLQR_m6mxEOv31Gss5zfph1GcJuLeS65g/exec";
 
 // ---------------- LOGIN LOGIC ----------------
 document.getElementById('btnLogin').addEventListener('click', () => {
