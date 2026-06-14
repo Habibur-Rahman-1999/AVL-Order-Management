@@ -359,3 +359,22 @@ body {
         padding: 25px 20px;
     }
 }
+
+.nav-logo {
+    height: 40px;
+    width: auto;
+    display; block;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+@media (max-width: 480px) {
+    .nav-logo {
+        height: 30px;
+    }
+
+    .nav-brand {
+        padding: 10px 0;
+        margin-right: 10px;
+    }
+}
