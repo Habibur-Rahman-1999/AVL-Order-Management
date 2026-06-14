@@ -69,3 +69,38 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
 @media (max-width: 500px) { .add-line-row { flex-direction: column !important; gap: 8px !important; } .add-line-row input { width: 100% !important; } .add-line-row button { width: 100% !important; } }
 #editUserModal > div { animation: fadeIn 0.2s ease; }
 .edit-input { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
+
+/* Item Form Specific */
+#createItemFormContainer .input-group {
+    margin-bottom: 0;
+}
+#createItemFormContainer .input-group input,
+#createItemFormContainer .input-group select {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}
+#createItemFormContainer h4 {
+    color: #1e3c72;
+    margin-top: 10px;
+}
+@media (max-width: 600px) {
+    #createItemFormContainer .form-row {
+        flex-direction: column !important;
+    }
+}
+
+/* Edit Item Modal inputs styling */
+#editItemFormContent .input-group {
+    margin-bottom: 0;
+}
+#editItemFormContent .input-group input,
+#editItemFormContent .input-group select {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}

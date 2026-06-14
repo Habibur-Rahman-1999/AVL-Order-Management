@@ -25,6 +25,7 @@ const database = getDatabase(app);
 let generatedOTP = null;
 let tempRegistrationData = {};
 let allUsersCache = {};
+let allItemsCache = {};
 let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
 
 const loginView = document.getElementById('login-view');
@@ -313,6 +314,10 @@ function switchSubView(viewId) {
   if (target) target.classList.add('active');
   if (viewId === 'manageUnits') loadManageUnits();
   else if (viewId === 'userApprovals') loadUserManagement();
+  else if (viewId === 'itemList') {
+    loadItemFormUnits();
+    loadItems();
+  }
 }
 
 // ========== USER MANAGEMENT ==========
@@ -363,12 +368,10 @@ function applyFilter(term, admins) {
 function renderUserTable(users, admins = {}) {
   const container = document.getElementById('allUsersContainer');
   container.innerHTML = '';
-
   if (!users || Object.keys(users).length === 0) {
     container.innerHTML = '<p class="empty-message">কোনো ইউজার পাওয়া যায়নি।</p>';
     return;
   }
-
   const table = document.createElement('table');
   table.className = 'approval-table';
   table.innerHTML = `
@@ -378,12 +381,10 @@ function renderUserTable(users, admins = {}) {
     <tbody></tbody>
   `;
   const tbody = table.querySelector('tbody');
-
   Object.entries(users).forEach(([uid, user]) => {
     let displayRole = user.role || 'sales';
     const userEmailKey = user.email?.replace(/\./g, '_');
     if (admins && userEmailKey && admins[userEmailKey] === true) displayRole = 'admin';
-
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${user.name}</td>
@@ -400,12 +401,10 @@ function renderUserTable(users, admins = {}) {
     `;
     tbody.appendChild(row);
   });
-
   const tableWrapper = document.createElement('div');
   tableWrapper.className = 'table-responsive';
   tableWrapper.appendChild(table);
   container.appendChild(tableWrapper);
-
   attachUserActions(users);
 }
 
@@ -614,7 +613,6 @@ function loadManageUnits() {
 }
 
 function attachUnitEventListeners() {
-  // Add line
   document.querySelectorAll('.btn-add-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const unitId = e.target.getAttribute('data-unit-id');
@@ -634,7 +632,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // Edit line
   document.querySelectorAll('.btn-edit-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const unitId = e.target.getAttribute('data-unit-id');
@@ -656,7 +653,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // Delete line
   document.querySelectorAll('.btn-delete-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       if (!confirm('এই সেলস লাইনটি মুছে ফেলতে চান?')) return;
@@ -673,7 +669,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // Delete unit
   document.querySelectorAll('.btn-delete-unit').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       if (!confirm('সম্পূর্ণ ইউনিটটি মুছে ফেলতে চান?')) return;
@@ -685,3 +680,498 @@ function attachUnitEventListeners() {
     });
   });
 }
+
+// ========== ITEM MANAGEMENT ==========
+async function loadItemFormUnits() {
+  const unitSelect = document.getElementById('itemUnit');
+  const lineSelect = document.getElementById('itemLine');
+  const unitsRef = ref(database, 'units');
+  unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+  try {
+    const snapshot = await get(unitsRef);
+    const units = snapshot.val();
+    if (units) {
+      Object.entries(units).forEach(([unitId, unit]) => {
+        const option = document.createElement('option');
+        option.value = unitId;
+        option.textContent = unit.shortCode;
+        unitSelect.appendChild(option);
+      });
+    }
+    unitSelect.addEventListener('change', async () => {
+      const selectedUnitId = unitSelect.value;
+      lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+      lineSelect.disabled = true;
+      if (!selectedUnitId) return;
+      const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+      const unitData = unitSnap.val();
+      if (unitData && unitData.salesLines) {
+        unitData.salesLines.forEach(line => {
+          const opt = document.createElement('option');
+          opt.value = line;
+          opt.textContent = line;
+          lineSelect.appendChild(opt);
+        });
+        lineSelect.disabled = false;
+      }
+    });
+  } catch (err) { console.error(err); }
+}
+
+function toggleTradeFields() {
+  const category = document.getElementById('newTradeCategory').value;
+  document.getElementById('freeFields').style.display = (category === 'free') ? 'block' : 'none';
+  document.getElementById('discountFields').style.display = (category === 'discount') ? 'block' : 'none';
+  calculateAffectedPrice();
+}
+
+function toggleDiscountValueField() {
+  const type = document.getElementById('discountType').value;
+  const container = document.getElementById('discountValueContainer');
+  const label = document.getElementById('discountValueLabel');
+  if (type) {
+    container.style.display = 'block';
+    label.textContent = type === 'percentage' ? 'শতকরা হার (%)' : 'পরিমাণ (টাকা)';
+    document.getElementById('discountValue').value = '';
+  } else {
+    container.style.display = 'none';
+  }
+  calculateAffectedPrice();
+}
+
+function calculateAffectedPrice() {
+  const distPrice = parseFloat(document.getElementById('newDistributorPrice').value) || 0;
+  const category = document.getElementById('newTradeCategory').value;
+  let affected = distPrice;
+  if (category === 'free') {
+    affected = distPrice;
+  } else if (category === 'discount') {
+    const type = document.getElementById('discountType').value;
+    const val = parseFloat(document.getElementById('discountValue').value) || 0;
+    if (type === 'percentage') {
+      affected = distPrice - (distPrice * val / 100);
+    } else if (type === 'amount') {
+      affected = distPrice - val;
+    }
+    if (affected < 0) affected = 0;
+  } else if (category === 'no_offer') {
+    affected = distPrice;
+  }
+  document.getElementById('affectedDistributorPrice').value = affected.toFixed(2);
+}
+
+function clearItemForm() {
+  document.getElementById('newItemCode').value = '';
+  document.getElementById('newItemDescription').value = '';
+  document.getElementById('newItemUOM').value = '';
+  document.getElementById('newDistributorPrice').value = '';
+  document.getElementById('newTradeCategory').value = '';
+  document.getElementById('freeMainQty').value = '';
+  document.getElementById('freeFreeQty').value = '';
+  document.getElementById('freeItemCode').value = '';
+  document.getElementById('discountType').value = '';
+  document.getElementById('discountValue').value = '';
+  document.getElementById('affectedDistributorPrice').value = '';
+  document.getElementById('itemUnit').value = '';
+  document.getElementById('itemLine').innerHTML = '<option value="">প্রথমে ইউনিট সিলেক্ট করুন</option>';
+  document.getElementById('itemLine').disabled = true;
+  document.getElementById('freeFields').style.display = 'none';
+  document.getElementById('discountFields').style.display = 'none';
+  document.getElementById('discountValueContainer').style.display = 'none';
+}
+
+document.getElementById('btnShowCreateItem').addEventListener('click', () => {
+  const form = document.getElementById('createItemFormContainer');
+  form.style.display = 'block';
+  loadItemFormUnits();
+  document.getElementById('newTradeCategory').addEventListener('change', toggleTradeFields);
+  document.getElementById('discountType').addEventListener('change', toggleDiscountValueField);
+  document.getElementById('newDistributorPrice').addEventListener('input', calculateAffectedPrice);
+});
+
+document.getElementById('btnCancelItem').addEventListener('click', () => {
+  document.getElementById('createItemFormContainer').style.display = 'none';
+  clearItemForm();
+});
+
+document.getElementById('btnSaveItem').addEventListener('click', async () => {
+  const itemCode = document.getElementById('newItemCode').value.trim();
+  const description = document.getElementById('newItemDescription').value.trim();
+  const uom = document.getElementById('newItemUOM').value.trim();
+  const distPrice = parseFloat(document.getElementById('newDistributorPrice').value);
+  const tradeCategory = document.getElementById('newTradeCategory').value;
+  const unitId = document.getElementById('itemUnit').value;
+  const unitShortCode = document.getElementById('itemUnit').selectedOptions[0]?.text || '';
+  const line = document.getElementById('itemLine').value;
+  const affectedPrice = parseFloat(document.getElementById('affectedDistributorPrice').value);
+
+  if (!itemCode || !description || !uom || isNaN(distPrice) || !tradeCategory || !unitId || !line) {
+    alert('সব আবশ্যক ঘর পূরণ করুন।');
+    return;
+  }
+
+  const freeDetails = tradeCategory === 'free' ? {
+    mainQty: parseInt(document.getElementById('freeMainQty').value) || 0,
+    freeQty: parseInt(document.getElementById('freeFreeQty').value) || 0,
+    freeItemCode: document.getElementById('freeItemCode').value.trim()
+  } : {};
+
+  const discountDetails = tradeCategory === 'discount' ? {
+    type: document.getElementById('discountType').value,
+    value: parseFloat(document.getElementById('discountValue').value) || 0
+  } : {};
+
+  try {
+    const itemsRef = ref(database, 'items');
+    await push(itemsRef, {
+      itemCode,
+      description,
+      uom,
+      distributorPrice: distPrice,
+      tradeCategory,
+      freeDetails,
+      discountDetails,
+      affectedDistributorPrice: affectedPrice,
+      unitId,
+      unitShortCode,
+      line
+    });
+    alert('আইটেম সংরক্ষিত হয়েছে।');
+    clearItemForm();
+    document.getElementById('createItemFormContainer').style.display = 'none';
+  } catch (err) {
+    alert('সংরক্ষণে সমস্যা: ' + err.message);
+  }
+});
+
+function loadItems() {
+  const container = document.getElementById('itemsTableContainer');
+  const itemsRef = ref(database, 'items');
+  const searchInput = document.getElementById('itemSearchInput');
+  const exportBtn = document.getElementById('btnExportItems');
+
+  onValue(itemsRef, (snapshot) => {
+    allItemsCache = snapshot.val() || {};
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterItems(term);
+    renderItemsTable(filtered);
+  });
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterItems(term);
+    renderItemsTable(filtered);
+  });
+
+  exportBtn.addEventListener('click', () => {
+    exportItemsToCSV(allItemsCache);
+  });
+}
+
+function filterItems(term) {
+  if (!allItemsCache) return {};
+  if (!term) return allItemsCache;
+  const filtered = {};
+  Object.entries(allItemsCache).forEach(([id, item]) => {
+    if (String(item.itemCode).toLowerCase().includes(term) || String(item.description).toLowerCase().includes(term)) {
+      filtered[id] = item;
+    }
+  });
+  return filtered;
+}
+
+function renderItemsTable(items) {
+  const container = document.getElementById('itemsTableContainer');
+  container.innerHTML = '';
+
+  if (!items || Object.keys(items).length === 0) {
+    container.innerHTML = '<p class="empty-message">কোনো আইটেম পাওয়া যায়নি।</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'approval-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>কোড</th><th>বিবরণ</th><th>UOM</th><th>ডিস্ট্রি. প্রাইস</th>
+        <th>ট্রেড ক্যাট.</th><th>অ্যাফে. প্রাইস</th><th>ইউনিট</th><th>লাইন</th><th>অ্যাকশন</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  Object.entries(items).forEach(([id, item]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.itemCode}</td>
+      <td>${item.description}</td>
+      <td>${item.uom}</td>
+      <td>${item.distributorPrice}</td>
+      <td>${item.tradeCategory}</td>
+      <td>${item.affectedDistributorPrice}</td>
+      <td>${item.unitShortCode || ''}</td>
+      <td>${item.line}</td>
+      <td>
+        <button class="btn-edit-item" data-id="${id}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:4px;">Edit</button>
+        <button class="btn-delete-item" data-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-responsive';
+  tableWrapper.appendChild(table);
+  container.appendChild(tableWrapper);
+
+  attachItemActions(items);
+}
+
+function attachItemActions(items) {
+  document.querySelectorAll('.btn-edit-item').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      const item = items[id];
+      if (!item) return;
+      openEditItemModal(id, item);
+    });
+  });
+  document.querySelectorAll('.btn-delete-item').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('আইটেমটি মুছে ফেলতে চান?')) return;
+      const id = e.target.getAttribute('data-id');
+      try {
+        await set(ref(database, 'items/' + id), null);
+        alert('আইটেম ডিলিট করা হয়েছে।');
+      } catch (err) { alert('ডিলিট ব্যর্থ: ' + err.message); }
+    });
+  });
+}
+
+function exportItemsToCSV(items) {
+  if (!items || Object.keys(items).length === 0) {
+    alert('এক্সপোর্ট করার মতো কোনো আইটেম নেই।');
+    return;
+  }
+  const rows = [['Item Code', 'Description', 'UOM', 'Distributor Price', 'Trade Category', 'Affected Price', 'Unit', 'Line']];
+  Object.values(items).forEach(item => {
+    rows.push([
+      item.itemCode || '', item.description || '', item.uom || '',
+      item.distributorPrice || '', item.tradeCategory || '',
+      item.affectedDistributorPrice || '', item.unitShortCode || '', item.line || ''
+    ]);
+  });
+  let csvContent = '';
+  rows.forEach(row => {
+    const escapedRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
+    csvContent += escapedRow.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `items_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+// ========== EDIT ITEM MODAL ==========
+const editItemModal = document.getElementById('editItemModal');
+let editingItemId = null;
+
+document.getElementById('btnCloseEditItemModal').addEventListener('click', () => {
+  editItemModal.style.display = 'none';
+  editingItemId = null;
+});
+
+async function openEditItemModal(id, item) {
+  editingItemId = id;
+  const content = document.getElementById('editItemFormContent');
+  
+  // Build form similar to create form but with edit prefixes
+  content.innerHTML = `
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>আইটেম কোড</label>
+        <input type="text" id="editItemCode" value="${item.itemCode}">
+      </div>
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>আইটেম বর্ণনা</label>
+        <input type="text" id="editItemDescription" value="${item.description}">
+      </div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:150px;">
+        <label>UOM</label>
+        <input type="text" id="editItemUOM" value="${item.uom}">
+      </div>
+      <div class="input-group" style="flex:1; min-width:150px;">
+        <label>ডিস্ট্রিবিউটর প্রাইস</label>
+        <input type="number" id="editDistributorPrice" value="${item.distributorPrice}">
+      </div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>ট্রেড ক্যাটাগরি</label>
+        <select id="editTradeCategory">
+          <option value="free" ${item.tradeCategory==='free'?'selected':''}>Free</option>
+          <option value="discount" ${item.tradeCategory==='discount'?'selected':''}>Discount</option>
+          <option value="no_offer" ${item.tradeCategory==='no_offer'?'selected':''}>No Offer</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="editFreeFields" style="display:${item.tradeCategory==='free'?'block':'none'};">
+      <h4>ফ্রি অফার</h4>
+      <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+        <div class="input-group" style="flex:1; min-width:150px;">
+          <label>মেইন কোয়ান্টিটি</label>
+          <input type="number" id="editFreeMainQty" value="${item.freeDetails?.mainQty || ''}">
+        </div>
+        <div class="input-group" style="flex:1; min-width:150px;">
+          <label>ফ্রি কোয়ান্টিটি</label>
+          <input type="number" id="editFreeFreeQty" value="${item.freeDetails?.freeQty || ''}">
+        </div>
+        <div class="input-group" style="flex:1; min-width:200px;">
+          <label>ফ্রি আইটেম কোড</label>
+          <input type="text" id="editFreeItemCode" value="${item.freeDetails?.freeItemCode || ''}">
+        </div>
+      </div>
+    </div>
+
+    <div id="editDiscountFields" style="display:${item.tradeCategory==='discount'?'block':'none'};">
+      <h4>ডিসকাউন্ট</h4>
+      <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+        <div class="input-group" style="flex:1; min-width:200px;">
+          <label>ডিসকাউন্ট টাইপ</label>
+          <select id="editDiscountType">
+            <option value="percentage" ${item.discountDetails?.type==='percentage'?'selected':''}>Percentage</option>
+            <option value="amount" ${item.discountDetails?.type==='amount'?'selected':''}>Amount</option>
+          </select>
+        </div>
+        <div class="input-group" style="flex:1; min-width:200px;">
+          <label>ভ্যালু</label>
+          <input type="number" id="editDiscountValue" value="${item.discountDetails?.value || ''}">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>অ্যাফেক্টেড প্রাইস</label>
+        <input type="number" id="editAffectedPrice" value="${item.affectedDistributorPrice}" readonly>
+      </div>
+    </div>
+
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>ইউনিট</label>
+        <select id="editItemUnit">
+          <option value="">লোড হচ্ছে...</option>
+        </select>
+      </div>
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>লাইন</label>
+        <select id="editItemLine">
+          <option value="">প্রথমে ইউনিট সিলেক্ট করুন</option>
+        </select>
+      </div>
+    </div>
+  `;
+
+  // Load unit dropdown
+  const unitSelect = document.getElementById('editItemUnit');
+  const lineSelect = document.getElementById('editItemLine');
+  const unitsRef = ref(database, 'units');
+  const unitsSnap = await get(unitsRef);
+  const units = unitsSnap.val() || {};
+  unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+  Object.entries(units).forEach(([unitId, unit]) => {
+    const opt = document.createElement('option');
+    opt.value = unitId;
+    opt.textContent = unit.shortCode;
+    if (unitId === item.unitId) opt.selected = true;
+    unitSelect.appendChild(opt);
+  });
+
+  const updateEditLines = async () => {
+    const selectedUnitId = unitSelect.value;
+    lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+    if (!selectedUnitId) return;
+    const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+    const unitData = unitSnap.val();
+    if (unitData && unitData.salesLines) {
+      unitData.salesLines.forEach(line => {
+        const opt = document.createElement('option');
+        opt.value = line;
+        opt.textContent = line;
+        if (line === item.line) opt.selected = true;
+        lineSelect.appendChild(opt);
+      });
+    }
+  };
+  unitSelect.addEventListener('change', updateEditLines);
+  if (unitSelect.value) await updateEditLines();
+
+  // Recalculate affected price when fields change
+  const recalcEdit = () => {
+    const dist = parseFloat(document.getElementById('editDistributorPrice').value) || 0;
+    const cat = document.getElementById('editTradeCategory').value;
+    let aff = dist;
+    if (cat === 'free') aff = dist;
+    else if (cat === 'discount') {
+      const type = document.getElementById('editDiscountType').value;
+      const val = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+      aff = type === 'percentage' ? dist - (dist * val / 100) : dist - val;
+      if (aff < 0) aff = 0;
+    }
+    document.getElementById('editAffectedPrice').value = aff.toFixed(2);
+  };
+
+  document.getElementById('editDistributorPrice').addEventListener('input', recalcEdit);
+  document.getElementById('editTradeCategory').addEventListener('change', function() {
+    document.getElementById('editFreeFields').style.display = this.value === 'free' ? 'block' : 'none';
+    document.getElementById('editDiscountFields').style.display = this.value === 'discount' ? 'block' : 'none';
+    recalcEdit();
+  });
+  document.getElementById('editDiscountType').addEventListener('change', recalcEdit);
+  document.getElementById('editDiscountValue').addEventListener('input', recalcEdit);
+
+  editItemModal.style.display = 'flex';
+}
+
+document.getElementById('btnSaveEditItem').addEventListener('click', async () => {
+  if (!editingItemId) return;
+  const updatedItem = {
+    itemCode: document.getElementById('editItemCode').value.trim(),
+    description: document.getElementById('editItemDescription').value.trim(),
+    uom: document.getElementById('editItemUOM').value.trim(),
+    distributorPrice: parseFloat(document.getElementById('editDistributorPrice').value),
+    tradeCategory: document.getElementById('editTradeCategory').value,
+    unitId: document.getElementById('editItemUnit').value,
+    unitShortCode: document.getElementById('editItemUnit').selectedOptions[0]?.text || '',
+    line: document.getElementById('editItemLine').value,
+    affectedDistributorPrice: parseFloat(document.getElementById('editAffectedPrice').value),
+    freeDetails: document.getElementById('editTradeCategory').value === 'free' ? {
+      mainQty: parseInt(document.getElementById('editFreeMainQty').value) || 0,
+      freeQty: parseInt(document.getElementById('editFreeFreeQty').value) || 0,
+      freeItemCode: document.getElementById('editFreeItemCode').value.trim()
+    } : {},
+    discountDetails: document.getElementById('editTradeCategory').value === 'discount' ? {
+      type: document.getElementById('editDiscountType').value,
+      value: parseFloat(document.getElementById('editDiscountValue').value) || 0
+    } : {}
+  };
+
+  if (!updatedItem.itemCode || !updatedItem.description || !updatedItem.uom || isNaN(updatedItem.distributorPrice) || !updatedItem.tradeCategory || !updatedItem.unitId || !updatedItem.line) {
+    alert('সব আবশ্যক ফিল্ড পূরণ করুন।');
+    return;
+  }
+
+  try {
+    await update(ref(database, 'items/' + editingItemId), updatedItem);
+    alert('আইটেম আপডেট সফল হয়েছে।');
+    editItemModal.style.display = 'none';
+    editingItemId = null;
+  } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
+});
