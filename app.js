@@ -1,7 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updatePassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, get, update, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updatePassword 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+// Firebase Config Properties
 const firebaseConfig = {
   apiKey: "AIzaSyBRNwi-pA8OSq7__Rn4Hg5X_280W9AexH0",
   authDomain: "avl-order-management.firebaseapp.com",
@@ -12,459 +18,323 @@ const firebaseConfig = {
   appId: "1:825754454601:web:360c6c265f1f6b11b50d98"
 };
 
+// Initialize Core Framework components
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
+console.log("Firebase initialized successfully");
 
-// Global state
+// Global state controller for temporary operations
 let generatedOTP = null;
+let resetOTP = null;
+let resetTargetEmail = "";
 let tempRegistrationData = {};
-let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
-let csvData = [];
-let navListenersAdded = false;
-let customerFormListenersAdded = false;
 
-const unitLines = {
-  'AFBL': ['A','B','C'],
-  'ADL': ['D','UHT'],
-  'AEEL': ['E'],
-  'AALL': ['AG'],
-  'AHHL': ['H'],
-  'ABEL': ['BC','SP']
-};
-
-function updateLineDropdown(unitSelectId, lineSelectId) {
-  const unit = document.getElementById(unitSelectId).value;
-  const lineSel = document.getElementById(lineSelectId);
-  lineSel.innerHTML = '<option value="">লাইন সিলেক্ট করুন</option>';
-  if (unitLines[unit]) {
-    unitLines[unit].forEach(line => {
-      const opt = document.createElement('option');
-      opt.value = line; opt.text = line;
-      lineSel.appendChild(opt);
-    });
-  }
-}
-
-// Registration unit change
-document.getElementById('regUnit').addEventListener('change', () => updateLineDropdown('regUnit', 'regLine'));
-
-// Auth views
+// View Elements Dom References
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
 const otpView = document.getElementById('otp-view');
-const mainAppView = document.getElementById('main-app');
+const resetOtpView = document.getElementById('reset-otp-view');
+const newPasswordView = document.getElementById('new-password-view');
 
-document.getElementById('goToRegister').addEventListener('click', () => switchAuthView(registerView));
-document.getElementById('goToLogin').addEventListener('click', () => switchAuthView(loginView));
-document.getElementById('backToRegister').addEventListener('click', () => switchAuthView(registerView));
-
-function switchAuthView(view) {
-  [loginView, registerView, otpView].forEach(v => v.classList.remove('active'));
-  view.classList.add('active');
-}
-
-const appsScriptURL = "https://script.google.com/macros/s/AKfycby4WFu5qoOuYFfiFFC1oDuHFQR2aVMZj4mBdBLQR_m6mxEOv31Gss5zfph1GcJuLeS65g/exec";
-
-function toggleLoading(btnId, loading, defaultHtml) {
-  const btn = document.getElementById(btnId);
-  if (!btn) return;
-  if (loading) {
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> প্রসেসিং...`;
-  } else {
-    btn.disabled = false;
-    btn.innerHTML = defaultHtml;
-  }
-}
-
-// ---------- LOGIN ----------
-document.getElementById('btnLogin').addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const dft = `<i class="fas fa-right-to-bracket"></i> লগইন`;
-  if (!email || !password) { alert('ইমেইল ও পাসওয়ার্ড দিন'); return; }
-  toggleLoading('btnLogin', true, dft);
-  signInWithEmailAndPassword(auth, email, password)
-    .then(async (uc) => {
-      const user = uc.user;
-      const snap = await get(ref(database, 'users/' + user.uid));
-      if (!snap.exists()) { await signOut(auth); toggleLoading('btnLogin', false, dft); alert('অ্যাকাউন্ট পাওয়া যায়নি'); return; }
-      const userData = snap.val();
-      if (userData.status !== 'approved') { await signOut(auth); toggleLoading('btnLogin', false, dft); alert('অনুমোদিত নয়'); return; }
-      const adminsSnap = await get(ref(database, 'admins'));
-      const admins = adminsSnap.val() || {};
-      const isAdmin = admins[email.replace(/\./g, '_')] === true;
-      currentUser = { uid: user.uid, email: user.email, name: userData.name, role: isAdmin ? 'admin' : 'user', status: userData.status };
-      toggleLoading('btnLogin', false, dft);
-      showMainApp();
-    })
-    .catch(err => { toggleLoading('btnLogin', false, dft); alert('লগইন ব্যর্থ: ' + err.message); });
+// Dynamic Navigation Controls
+document.getElementById('goToRegister').addEventListener('click', () => {
+  console.log("Navigating to Register view");
+  switchView(registerView);
+});
+document.getElementById('goToLogin').addEventListener('click', () => {
+  console.log("Navigating to Login view");
+  switchView(loginView);
+});
+document.getElementById('backToRegister').addEventListener('click', () => {
+  console.log("Back to Register view from OTP");
+  switchView(registerView);
+});
+document.getElementById('backToLoginFromReset').addEventListener('click', () => {
+  console.log("Back to Login from Reset OTP");
+  switchView(loginView);
 });
 
-// ---------- REGISTRATION OTP (FIXED – no-cors, fire-and-forget) ----------
-document.getElementById('btnSendOTP').addEventListener('click', () => {
-  const enroll = document.getElementById('regEnroll').value.trim();
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const unit = document.getElementById('regUnit').value;
-  const line = document.getElementById('regLine').value;
-  const password = document.getElementById('regPassword').value;
-  const dft = `<i class="fas fa-paper-plane"></i> ওটিপি পাঠান`;
-  if (!enroll || !name || !email || !unit || !line || !password) { alert('সকল ঘর পূরণ করুন'); return; }
-  if (password.length < 6) { alert('পাসওয়ার্ড অন্তত ৬ অক্ষর'); return; }
-  tempRegistrationData = { enroll, name, email, unit, line, password };
-  generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-  toggleLoading('btnSendOTP', true, dft);
-  // Fire-and-forget (no-cors) – we trust the Apps Script will send the mail
-  fetch(appsScriptURL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ to_email: email, to_name: name, otp_code: generatedOTP, type: "REGISTRATION" })
-  })
-  .then(() => {
-    toggleLoading('btnSendOTP', false, dft);
-    document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি পাঠানো হয়েছে`;
-    switchAuthView(otpView);
-  })
-  .catch(() => {
-    toggleLoading('btnSendOTP', false, dft);
-    alert('ওটিপি পাঠাতে সমস্যা হয়েছে (নেটওয়ার্ক ত্রুটি)');
-  });
-});
-
-// ---------- VERIFY OTP & REGISTER ----------
-document.getElementById('btnVerifyOTP').addEventListener('click', () => {
-  const userOTP = document.getElementById('otpInput').value.trim();
-  const dft = `<i class="fas fa-circle-check"></i> যাচাই ও রেজিস্ট্রেশন`;
-  if (userOTP !== generatedOTP) { alert('ভুল ওটিপি!'); return; }
-  toggleLoading('btnVerifyOTP', true, dft);
-  createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.password)
-    .then(async (uc) => {
-      const uid = uc.user.uid;
-      await set(ref(database, 'users/' + uid), {
-        enroll: tempRegistrationData.enroll,
-        name: tempRegistrationData.name,
-        email: tempRegistrationData.email,
-        unit: tempRegistrationData.unit,
-        line: tempRegistrationData.line,
-        status: 'pending',
-        role: 'user',
-        createdAt: new Date().toISOString()
-      });
-      await signOut(auth);
-      toggleLoading('btnVerifyOTP', false, dft);
-      alert('রেজিস্ট্রেশন সফল! অনুমোদনের পর লগইন করুন।');
-      document.getElementById('otpInput').value = '';
-      switchAuthView(loginView);
-    })
-    .catch(err => { toggleLoading('btnVerifyOTP', false, dft); alert('রেজিস্ট্রেশন ব্যর্থ: ' + err.message); });
-});
-
-// ---------- MAIN APP ----------
-function showMainApp() {
-  document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
-  mainAppView.style.display = 'flex';
-  mainAppView.classList.add('active');
-  document.getElementById('loggedUserName').textContent = currentUser.name;
-  document.getElementById('adminApprovalsMenu').style.display = currentUser.role === 'admin' ? 'block' : 'none';
-  document.getElementById('editUsersMenu').style.display = currentUser.role === 'admin' ? 'block' : 'none';
-  switchSubView('dashboard');
-
-  if (!navListenersAdded) {
-    document.querySelectorAll('.nav-menu li a[data-view]').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const vid = link.getAttribute('data-view');
-        switchSubView(vid);
-        document.querySelectorAll('.nav-menu li a').forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-      });
-    });
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-      await signOut(auth);
-      mainAppView.style.display = 'none';
-      mainAppView.classList.remove('active');
-      switchAuthView(loginView);
-      currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
-    });
-    document.getElementById('btnUpdatePassword').addEventListener('click', () => {
-      const np = document.getElementById('newPass').value;
-      const cp = document.getElementById('confirmNewPass').value;
-      if (!np || !cp) { alert('উভয় ঘর পূরণ করুন'); return; }
-      if (np.length < 6) { alert('পাসওয়ার্ড অন্তত ৬ অক্ষর'); return; }
-      if (np !== cp) { alert('পাসওয়ার্ড মেলেনি'); return; }
-      toggleLoading('btnUpdatePassword', true, `<i class="fas fa-floppy-disk"></i> আপডেট`);
-      updatePassword(auth.currentUser, np)
-        .then(() => {
-          toggleLoading('btnUpdatePassword', false, `<i class="fas fa-floppy-disk"></i> আপডেট`);
-          alert('পাসওয়ার্ড আপডেট সফল');
-          document.getElementById('newPass').value = '';
-          document.getElementById('confirmNewPass').value = '';
-        })
-        .catch(err => { toggleLoading('btnUpdatePassword', false, `<i class="fas fa-floppy-disk"></i> আপডেট`); alert('ব্যর্থ: ' + err.message); });
-    });
-    navListenersAdded = true;
-  }
+function switchView(targetView) {
+    console.log("Switching to view:", targetView.id);
+    [loginView, registerView, otpView, resetOtpView, newPasswordView].forEach(view => view.classList.remove('active'));
+    targetView.classList.add('active');
 }
 
-function switchSubView(vid) {
-  document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
-  const target = document.getElementById(vid + '-view');
-  if (target) {
-    target.classList.add('active');
-    if (vid === 'customerList') initCustomerList();
-    else if (vid === 'addCustomer') initAddCustomerForm();
-    else if (vid === 'editUsers') loadEditUsers();
-    else if (vid === 'userApprovals') loadPendingUsers();
-  }
-}
-
-// ---------- CUSTOMER LIST ----------
-function initCustomerList() {
-  const actionsDiv = document.getElementById('customerActions');
-  actionsDiv.innerHTML = '';
-  if (currentUser.role === 'admin') {
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn btn-primary';
-    addBtn.style.width = 'auto';
-    addBtn.innerHTML = '<i class="fas fa-plus"></i> Add Customer';
-    addBtn.addEventListener('click', () => { clearCustomerForm(); switchSubView('addCustomer'); });
-    actionsDiv.appendChild(addBtn);
-  }
-  loadCustomerTable();
-}
-
-function loadCustomerTable() {
-  const container = document.getElementById('customerTableContainer');
-  onValue(ref(database, 'customers'), (snap) => {
-    const customers = snap.val();
-    container.innerHTML = '';
-    if (!customers) { container.innerHTML = '<p class="empty-message">কোনো কাস্টমার নেই</p>'; return; }
-    let filtered;
-    if (currentUser.role === 'admin') {
-      filtered = Object.entries(customers);
+// Global Loading Animation Toggle Handler Component
+function toggleLoading(buttonId, isProcessing, defaultHtml) {
+    const targetButton = document.getElementById(buttonId);
+    if (isProcessing) {
+        console.log(`Loading started on button ${buttonId}`);
+        targetButton.disabled = true;
+        targetButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> প্রসেসিং হচ্ছে...`;
     } else {
-      filtered = Object.entries(customers).filter(([_, c]) => {
-        if (!c.salesEmails) return false;
-        const emails = Array.isArray(c.salesEmails) ? c.salesEmails : c.salesEmails.split(',').map(e => e.trim());
-        return emails.includes(currentUser.email);
-      });
+        console.log(`Loading ended on button ${buttonId}`);
+        targetButton.disabled = false;
+        targetButton.innerHTML = defaultHtml;
     }
-    if (filtered.length === 0) { container.innerHTML = '<p class="empty-message">কোনো কাস্টমার নেই</p>'; return; }
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    table.innerHTML = `<thead><tr><th>Code</th><th>Name</th><th>Warehouse</th><th>Unit</th><th>Line</th><th>Region</th><th>Area</th><th>Point</th><th>ERP Code</th>${currentUser.role === 'admin' ? '<th>Action</th>' : ''}</tr></thead><tbody></tbody>`;
-    const tbody = table.querySelector('tbody');
-    filtered.forEach(([key, cust]) => {
-      const r = document.createElement('tr');
-      r.innerHTML = `<td>${cust.customerCode || ''}</td><td>${cust.customerName || ''}</td><td>${cust.warehouse || ''}</td><td>${cust.unit || ''}</td><td>${cust.line || ''}</td><td>${cust.region || ''}</td><td>${cust.area || ''}</td><td>${cust.point || ''}</td><td>${cust.erpCode || ''}</td>${currentUser.role === 'admin' ? `<td><button class="btn-edit edit-cust-btn" data-id="${key}">এডিট</button> <button class="btn-delete delete-cust-btn" data-id="${key}">ডিলিট</button></td>` : ''}`;
-      tbody.appendChild(r);
-    });
-    container.appendChild(table);
-    if (currentUser.role === 'admin') {
-      document.querySelectorAll('.edit-cust-btn').forEach(b => b.addEventListener('click', () => editCustomer(b.dataset.id, customers[b.dataset.id])));
-      document.querySelectorAll('.delete-cust-btn').forEach(b => b.addEventListener('click', () => {
-        if (confirm('এই কাস্টমার ডিলিট করবেন?')) remove(ref(database, 'customers/' + b.dataset.id)).then(() => alert('ডিলিট সফল')).catch(err => alert('ত্রুটি: ' + err.message));
-      }));
+}
+
+// আপনার লাইভ গুগল অ্যাপস স্ক্রিপ্ট ওয়েব অ্যাপ ইউআরএল
+const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
+
+// ---------------- LOGIN LOGIC ----------------
+document.getElementById('btnLogin').addEventListener('click', () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const defaultBtnHtml = `<i class="fas fa-right-to-bracket"></i> লগইন`;
+    
+    console.log("Login attempt for email:", email);
+    if(!email || !password) {
+        console.warn("Login validation failed: missing email or password");
+        alert('দয়া করে আপনার লগইন আইডি এবং পাসওয়ার্ড প্রদান করুন।');
+        return;
     }
-  });
-}
+    
+    toggleLoading('btnLogin', true, defaultBtnHtml);
+    
+    signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            console.log("Login successful, UID:", userCredential.user.uid);
+            toggleLoading('btnLogin', false, defaultBtnHtml);
+            alert('লগইন সফল হয়েছে!');
+            // You can redirect or update UI here
+        })
+        .catch(err => {
+            console.error("Login error:", err);
+            toggleLoading('btnLogin', false, defaultBtnHtml);
+            alert('লগইন ব্যর্থ: ' + err.message);
+        });
+});
 
-function editCustomer(id, data) {
-  document.getElementById('editCustomerId').value = id;
-  document.getElementById('customerFormTitle').textContent = 'কাস্টমার এডিট করুন';
-  document.getElementById('custCode').value = data.customerCode || '';
-  document.getElementById('custName').value = data.customerName || '';
-  document.getElementById('custWarehouse').value = data.warehouse || '';
-  document.getElementById('custUnit').value = data.unit || '';
-  updateLineDropdown('custUnit', 'custLine');
-  document.getElementById('custLine').value = data.line || '';
-  document.getElementById('custRegion').value = data.region || '';
-  document.getElementById('custArea').value = data.area || '';
-  document.getElementById('custPoint').value = data.point || '';
-  document.getElementById('custErpCode').value = data.erpCode || '';
-  document.getElementById('custSalesEmails').value = (Array.isArray(data.salesEmails) ? data.salesEmails.join(', ') : data.salesEmails) || '';
-  document.getElementById('btnCancelCustomerEdit').style.display = 'inline-flex';
-  switchSubView('addCustomer');
-}
+// ---------------- CUSTOM PASSWORD RESET ROUTE (SEND OTP VIA APPSCRIPT) ----------------
+document.getElementById('btnForgotPassword').addEventListener('click', () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const defaultBtnHtml = `<i class="fas fa-key"></i> পাসওয়ার্ড ভুলে গেছেন?`;
 
-function clearCustomerForm() {
-  document.getElementById('editCustomerId').value = '';
-  document.getElementById('customerFormTitle').textContent = 'নতুন কাস্টমার যোগ করুন';
-  ['custCode', 'custName', 'custWarehouse', 'custRegion', 'custArea', 'custPoint', 'custErpCode', 'custSalesEmails'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('custUnit').value = '';
-  document.getElementById('custLine').innerHTML = '<option value="">প্রথমে Unit সিলেক্ট করুন</option>';
-  document.getElementById('btnCancelCustomerEdit').style.display = 'none';
-}
-
-function initAddCustomerForm() {
-  if (!customerFormListenersAdded) {
-    document.getElementById('custUnit').addEventListener('change', () => updateLineDropdown('custUnit', 'custLine'));
-    document.getElementById('btnSaveCustomer').addEventListener('click', saveCustomer);
-    document.getElementById('btnCancelCustomerEdit').addEventListener('click', () => { clearCustomerForm(); switchSubView('customerList'); });
-    document.getElementById('btnBackToCustomerList').addEventListener('click', () => { clearCustomerForm(); switchSubView('customerList'); });
-
-    const csvArea = document.getElementById('csvUploadArea');
-    const csvInput = document.getElementById('csvFileInput');
-    csvArea.addEventListener('click', () => csvInput.click());
-    csvArea.addEventListener('dragover', e => { e.preventDefault(); csvArea.style.borderColor = '#2a5298'; });
-    csvArea.addEventListener('dragleave', () => csvArea.style.borderColor = '#94a3b8');
-    csvArea.addEventListener('drop', e => {
-      e.preventDefault();
-      csvArea.style.borderColor = '#94a3b8';
-      if (e.dataTransfer.files.length) { csvInput.files = e.dataTransfer.files; handleCSV(e.dataTransfer.files[0]); }
-    });
-    csvInput.addEventListener('change', e => { if (e.target.files.length) handleCSV(e.target.files[0]); });
-    document.getElementById('btnUploadCSV').addEventListener('click', uploadCSV);
-    customerFormListenersAdded = true;
-  }
-}
-
-function saveCustomer() {
-  const id = document.getElementById('editCustomerId').value;
-  const code = document.getElementById('custCode').value.trim();
-  const name = document.getElementById('custName').value.trim();
-  const warehouse = document.getElementById('custWarehouse').value.trim();
-  const unit = document.getElementById('custUnit').value;
-  const line = document.getElementById('custLine').value;
-  const region = document.getElementById('custRegion').value.trim();
-  const area = document.getElementById('custArea').value.trim();
-  const point = document.getElementById('custPoint').value.trim();
-  const erp = document.getElementById('custErpCode').value.trim();
-  const emailsRaw = document.getElementById('custSalesEmails').value.trim();
-  if (!code || !name || !warehouse || !unit || !line || !region || !area || !emailsRaw) { alert('আবশ্যক ক্ষেত্র পূরণ করুন'); return; }
-  const emails = emailsRaw.split(',').map(e => e.trim()).filter(e => e);
-  if (!emails.length) { alert('ইমেইল দিন'); return; }
-  const data = { customerCode: code, customerName: name, warehouse, unit, line, region, area, point: point || '', erpCode: erp || '', salesEmails: emails, updatedAt: new Date().toISOString() };
-  if (id) {
-    data.updatedBy = currentUser.email;
-    toggleLoading('btnSaveCustomer', true, `<i class="fas fa-save"></i> আপডেট`);
-    update(ref(database, 'customers/' + id), data)
-      .then(() => { toggleLoading('btnSaveCustomer', false, `<i class="fas fa-save"></i> সেভ`); alert('কাস্টমার আপডেট হয়েছে!'); clearCustomerForm(); switchSubView('customerList'); })
-      .catch(err => { toggleLoading('btnSaveCustomer', false, `<i class="fas fa-save"></i> সেভ`); alert('ত্রুটি: ' + err.message); });
-  } else {
-    data.createdBy = currentUser.email; data.createdAt = new Date().toISOString();
-    toggleLoading('btnSaveCustomer', true, `<i class="fas fa-save"></i> সেভ`);
-    const newRef = push(ref(database, 'customers'));
-    set(newRef, data)
-      .then(() => { toggleLoading('btnSaveCustomer', false, `<i class="fas fa-save"></i> সেভ`); alert('কাস্টমার যোগ হয়েছে!'); clearCustomerForm(); })
-      .catch(err => { toggleLoading('btnSaveCustomer', false, `<i class="fas fa-save"></i> সেভ`); alert('ত্রুটি: ' + err.message); });
-  }
-}
-
-// CSV
-function handleCSV(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    const lines = e.target.result.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { alert('অন্তত একটি ডাটা রো দরকার'); return; }
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const req = ['customercode', 'customername', 'warehouse', 'unit', 'line', 'region', 'area', 'salesemails'];
-    if (req.some(r => !headers.includes(r))) { alert('কলাম missing: ' + req.filter(r => !headers.includes(r)).join(', ')); return; }
-    csvData = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim());
-      if (cols.length < headers.length) continue;
-      const obj = {}; headers.forEach((h, idx) => obj[h] = cols[idx]);
-      if (!obj.customercode || !obj.customername || !obj.warehouse || !obj.unit || !obj.line || !obj.region || !obj.area || !obj.salesemails) continue;
-      obj.salesemails = obj.salesemails.split(';').map(e => e.trim()).filter(e => e);
-      csvData.push(obj);
+    console.log("Forgot password initiated for:", email);
+    if(!email) {
+        console.warn("No email provided for password reset");
+        alert('পাসওয়ার্ড রিসেট করতে প্রথমে "ইউজার আইডি / ইমেইল" এর ঘরে আপনার অফিশিয়াল ইমেইলটি লিখুন।');
+        return;
     }
-    document.getElementById('csvPreview').innerHTML = `<p>${csvData.length} টি কাস্টমার পাওয়া গেছে</p>`;
-    document.getElementById('btnUploadCSV').style.display = 'inline-block';
-  };
-  reader.readAsText(file);
-}
 
-async function uploadCSV() {
-  if (!csvData.length) return;
-  toggleLoading('btnUploadCSV', true, `<i class="fas fa-upload"></i> ইম্পোর্ট`);
-  let ok = 0, fail = 0;
-  for (const row of csvData) {
-    const key = push(ref(database, 'customers')).key;
-    const data = {
-      customerCode: row.customercode, customerName: row.customername, warehouse: row.warehouse,
-      unit: row.unit, line: row.line, region: row.region, area: row.area,
-      point: row.point || '', erpCode: row.erpcode || '', salesEmails: row.salesemails,
-      createdBy: currentUser.email, createdAt: new Date().toISOString()
-    };
-    try { await set(ref(database, 'customers/' + key), data); ok++; } catch (err) { fail++; }
-  }
-  toggleLoading('btnUploadCSV', false, `<i class="fas fa-upload"></i> ইম্পোর্ট`);
-  document.getElementById('csvStatus').innerText = `ইম্পোর্ট: ${ok} সফল, ${fail} ব্যর্থ`;
-  csvData = [];
-  document.getElementById('btnUploadCSV').style.display = 'none';
-  document.getElementById('csvPreview').innerHTML = '';
-}
+    toggleLoading('btnForgotPassword', true, defaultBtnHtml);
+    resetTargetEmail = email;
 
-// ---------- EDIT USERS ----------
-function loadEditUsers() {
-  const container = document.getElementById('editUsersContainer');
-  onValue(ref(database, 'users'), snap => {
-    const users = snap.val(); container.innerHTML = '';
-    if (!users) { container.innerHTML = '<p class="empty-message">কোনো ইউজার নেই</p>'; return; }
-    const table = document.createElement('table'); table.className = 'data-table';
-    table.innerHTML = `<thead><tr><th>UID</th><th>নাম</th><th>ইমেইল</th><th>Enroll</th><th>Unit</th><th>Line</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody>`;
-    const tbody = table.querySelector('tbody');
-    Object.entries(users).forEach(([uid, u]) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `<td>${uid.substring(0, 8)}...</td><td>${u.name}</td><td>${u.email}</td><td>${u.enroll}</td><td>${u.unit || ''}</td><td>${u.line || ''}</td><td>${u.status}</td><td><button class="btn-edit edit-user-btn" data-uid="${uid}">এডিট</button> <button class="btn-delete delete-user-btn" data-uid="${uid}">ডিলিট</button></td>`;
-      tbody.appendChild(row);
+    // পাসওয়ার্ড রিসেটের ওটিপি জেনারেট করা
+    resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("Generated reset OTP:", resetOTP);
+
+    // অ্যাপস্ক্রিপ্ট এ ওটিপি রিকোয়েস্ট পাঠানো
+    fetch(appsScriptURL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            to_email: resetTargetEmail,
+            otp_code: resetOTP,
+            type: "PASSWORD_RESET"
+        })
+    })
+    .then(() => {
+        console.log("Reset OTP request sent to Apps Script");
+        toggleLoading('btnForgotPassword', false, defaultBtnHtml);
+        document.getElementById('reset-otp-message').innerText = `${resetTargetEmail} ঠিকানায় পাসওয়ার্ড রিসেট কোড পাঠানো হয়েছে।`;
+        switchView(resetOtpView);
+    })
+    .catch((error) => {
+        console.error("Error sending reset OTP:", error);
+        toggleLoading('btnForgotPassword', false, defaultBtnHtml);
+        alert("গুগল স্ক্রিপ্টের মাধ্যমে রিসেট ওটিপি পাঠাতে সমস্যা হয়েছে।");
     });
-    container.appendChild(table);
-    container.querySelectorAll('.edit-user-btn').forEach(b => b.addEventListener('click', () => showEditUserForm(b.dataset.uid, users[b.dataset.uid])));
-    container.querySelectorAll('.delete-user-btn').forEach(b => b.addEventListener('click', () => {
-      if (confirm('ডিলিট করবেন?')) remove(ref(database, 'users/' + b.dataset.uid)).then(() => alert('ডিলিট সফল')).catch(err => alert('ত্রুটি: ' + err.message));
-    }));
-  });
-}
+});
 
-function showEditUserForm(uid, user) {
-  const container = document.getElementById('editUsersContainer');
-  const div = document.createElement('div'); div.className = 'card';
-  div.innerHTML = `<h3>ইউজার এডিট: ${user.name}</h3>
-    <div class="form-grid">
-      <div class="input-group"><label>নাম</label><input id="editName" value="${user.name}"></div>
-      <div class="input-group"><label>Unit</label><select id="editUnit">${Object.keys(unitLines).map(u => `<option value="${u}" ${user.unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></div>
-      <div class="input-group"><label>Line</label><select id="editLine">${(unitLines[user.unit] || []).map(l => `<option value="${l}" ${user.line === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-      <div class="input-group"><label>Status</label><select id="editStatus"><option value="pending" ${user.status === 'pending' ? 'selected' : ''}>Pending</option><option value="approved" ${user.status === 'approved' ? 'selected' : ''}>Approved</option><option value="rejected" ${user.status === 'rejected' ? 'selected' : ''}>Rejected</option></select></div>
-    </div>
-    <div class="btn-row"><button class="btn btn-primary" id="btnUpdateUser">আপডেট</button><button class="btn btn-link" id="btnCancelEdit">বাতিল</button></div>`;
-  container.innerHTML = ''; container.appendChild(div);
-  document.getElementById('editUnit').addEventListener('change', function () {
-    const sel = document.getElementById('editLine'); sel.innerHTML = '';
-    (unitLines[this.value] || []).forEach(l => { const o = document.createElement('option'); o.value = l; o.text = l; sel.appendChild(o); });
-  });
-  document.getElementById('btnCancelEdit').addEventListener('click', () => loadEditUsers());
-  document.getElementById('btnUpdateUser').addEventListener('click', async () => {
-    const data = { name: document.getElementById('editName').value, unit: document.getElementById('editUnit').value, line: document.getElementById('editLine').value, status: document.getElementById('editStatus').value };
-    try { await update(ref(database, 'users/' + uid), data); alert('আপডেট সফল'); loadEditUsers(); } catch (err) { alert('ব্যর্থ: ' + err.message); }
-  });
-}
+// ---------------- VERIFY RESET OTP LOGIC ----------------
+document.getElementById('btnVerifyResetOtp').addEventListener('click', () => {
+    const enteredOtp = document.getElementById('resetOtpInput').value.trim();
+    const defaultBtnHtml = `<i class="fas fa-unlock-keyhole"></i> কোড যাচাই করুন`;
+    console.log("Verifying reset OTP:", enteredOtp, "Expected:", resetOTP);
 
-// ---------- USER APPROVALS ----------
-function loadPendingUsers() {
-  const container = document.getElementById('pendingUsersContainer');
-  onValue(ref(database, 'users'), snap => {
-    const users = snap.val(); container.innerHTML = '';
-    if (!users) { container.innerHTML = '<p class="empty-message">কোনো ইউজার নেই</p>'; return; }
-    let found = false;
-    const table = document.createElement('table'); table.className = 'data-table';
-    table.innerHTML = `<thead><tr><th>নাম</th><th>ইমেইল</th><th>Enroll</th><th>Unit</th><th>Line</th><th>Action</th></tr></thead><tbody></tbody>`;
-    const tbody = table.querySelector('tbody');
-    Object.entries(users).forEach(([uid, u]) => {
-      if (u.status === 'pending') {
-        found = true;
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${u.name}</td><td>${u.email}</td><td>${u.enroll}</td><td>${u.unit || ''}</td><td>${u.line || ''}</td><td><button class="btn-approve" data-uid="${uid}">Approve</button> <button class="btn-reject" data-uid="${uid}">Reject</button></td>`;
-        tbody.appendChild(row);
-      }
+    if(enteredOtp !== resetOTP) {
+        console.warn("OTP mismatch");
+        alert('ভুল ওটিপি কোড! দয়া করে সঠিক কোডটি পুনরায় চেক করুন।');
+        return;
+    }
+
+    toggleLoading('btnVerifyResetOtp', true, defaultBtnHtml);
+    setTimeout(() => {
+        console.log("Reset OTP verified successfully");
+        toggleLoading('btnVerifyResetOtp', false, defaultBtnHtml);
+        alert('ওটিপি কোড সফলভাবে ভেরিফাইড হয়েছে! এখন নতুন পাসওয়ার্ড সেট করুন।');
+        document.getElementById('resetOtpInput').value = "";
+        switchView(newPasswordView);
+    }, 800);
+});
+
+// ---------------- SAVE NEW PASSWORD LOGIC (MERGED) ----------------
+document.getElementById('btnSaveNewPassword').addEventListener('click', () => {
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+    const defaultBtnHtml = `<i class="fas fa-floppy-disk"></i> পাসওয়ার্ড সংরক্ষণ করুন`;
+    const user = auth.currentUser;  // Might be null if user hasn't logged in recently
+    console.log("Attempting to save new password. Current user:", user ? user.email : "No user logged in");
+
+    if(!newPassword || !confirmPassword) {
+        console.warn("Password fields empty");
+        alert('দয়া করে দুটি ঘরই পূরণ করুন।');
+        return;
+    }
+    if(newPassword.length < 6) {
+        console.warn("Password too short");
+        alert('নিরাপত্তার স্বার্থে পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।');
+        return;
+    }
+    if(newPassword !== confirmPassword) {
+        console.warn("Passwords do not match");
+        alert('পাসওয়ার্ড দুটি মেলেনি! পুনরায় চেক করুন।');
+        return;
+    }
+
+    toggleLoading('btnSaveNewPassword', true, defaultBtnHtml);
+
+    // Priority: If user is already authenticated, use Firebase Auth updatePassword
+    if (user) {
+        console.log("User authenticated, updating password via Firebase Auth");
+        updatePassword(user, newPassword)
+            .then(() => {
+                console.log("Password updated successfully");
+                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+                alert('সফলভাবে পাসওয়ার্ড আপডেট হয়েছে!');
+                document.getElementById('newPasswordInput').value = "";
+                document.getElementById('confirmPasswordInput').value = "";
+                switchView(loginView);
+            })
+            .catch((error) => {
+                console.error("Update password error:", error);
+                toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+                alert('পাসওয়ার্ড আপডেট ব্যর্থ: ' + error.message);
+            });
+    } else {
+        // Fallback: Forgot password flow (user not logged in) – save to Realtime Database
+        console.log("No authenticated user, saving password reset to RTDB");
+        const emailKey = resetTargetEmail.replace(/[.#$\[\]]/g, "_");
+        console.log("Saving to path: password_resets/" + emailKey);
+        set(ref(database, 'password_resets/' + emailKey), {
+            email: resetTargetEmail,
+            updatedPassword: newPassword,
+            updatedAt: new Date().toISOString()
+        })
+        .then(() => {
+            console.log("Password reset saved to database");
+            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+            alert('আপনার নতুন পাসওয়ার্ডটি সফলভাবে সিস্টেমে সংরক্ষিত হয়েছে। অনুগ্রহ করে নতুন পাসওয়ার্ড দিয়ে লগইন করুন!');
+            document.getElementById('newPasswordInput').value = "";
+            document.getElementById('confirmPasswordInput').value = "";
+            switchView(loginView);
+        })
+        .catch(err => {
+            console.error("Database save error:", err);
+            toggleLoading('btnSaveNewPassword', false, defaultBtnHtml);
+            alert('পাসওয়ার্ড সংরক্ষণে সমস্যা হয়েছে: ' + err.message);
+        });
+    }
+});
+
+// ---------------- SEND REGISTRATION OTP LOGIC ----------------
+document.getElementById('btnSendOTP').addEventListener('click', () => {
+    const enroll = document.getElementById('regEnroll').value.trim();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const salesLine = document.getElementById('regSalesLine').value;
+    const unit = document.getElementById('regUnit').value;
+    const password = document.getElementById('regPassword').value;
+    const defaultBtnHtml = `<i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান`;
+    console.log("Registration OTP request - email:", email, "name:", name);
+
+    if(!enroll || !name || !email || !salesLine || !unit || !password) {
+        console.warn("Registration form incomplete");
+        alert('ফর্মের প্রতিটি ঘর সঠিক তথ্য দিয়ে পূরণ করুন।');
+        return;
+    }
+    if(password.length < 6) {
+        console.warn("Registration password too short");
+        alert('নিরাপত্তার স্বার্থে পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।');
+        return;
+    }
+
+    tempRegistrationData = { enroll, name, email, salesLine, unit, password };
+    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("Generated registration OTP:", generatedOTP);
+
+    toggleLoading('btnSendOTP', true, defaultBtnHtml);
+
+    fetch(appsScriptURL, {
+        method: "POST",
+        mode: "no-cors", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            to_email: email,
+            to_name: name,
+            otp_code: generatedOTP,
+            type: "REGISTRATION"
+        })
+    })
+    .then(() => {
+        console.log("Registration OTP request sent");
+        toggleLoading('btnSendOTP', false, defaultBtnHtml);
+        document.getElementById('otp-message').innerText = `${email} ঠিকানায় ওটিপি কোডটি পাঠানো হয়েছে।`;
+        switchView(otpView);
+    })
+    .catch((error) => {
+        console.error("Error sending registration OTP:", error);
+        toggleLoading('btnSendOTP', false, defaultBtnHtml);
+        alert("গুগল স্ক্রিপ্টের মাধ্যমে মেইল পাঠাতে সমস্যা হয়েছে।");
     });
-    if (!found) { container.innerHTML = '<p class="empty-message">কোনো পেন্ডিং ইউজার নেই</p>'; return; }
-    container.appendChild(table);
-    container.querySelectorAll('.btn-approve').forEach(b => b.addEventListener('click', async e => { await update(ref(database, 'users/' + e.target.dataset.uid), { status: 'approved' }); alert('অনুমোদিত'); }));
-    container.querySelectorAll('.btn-reject').forEach(b => b.addEventListener('click', async e => { await update(ref(database, 'users/' + e.target.dataset.uid), { status: 'rejected' }); alert('বাতিল'); }));
-  });
-}
+});
+
+// ---------------- VERIFY OTP AND SIGNUP LOGIC ----------------
+document.getElementById('btnVerifyOTP').addEventListener('click', () => {
+    const userOTP = document.getElementById('otpInput').value.trim();
+    const defaultBtnHtml = `<i class="fas fa-circle-check"></i> কোড যাচাই ও অ্যাকাউন্ট তৈরি`;
+    console.log("Verifying registration OTP:", userOTP, "Expected:", generatedOTP);
+
+    if(userOTP !== generatedOTP) {
+        console.warn("Registration OTP mismatch");
+        alert('ভুল ওটিপি কোড! দয়া করে সঠিক কোডটি পুনরায় চেক করুন।');
+        return;
+    }
+
+    toggleLoading('btnVerifyOTP', true, defaultBtnHtml);
+
+    console.log("Creating Firebase Auth user with email:", tempRegistrationData.email);
+    createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.password)
+        .then((userCredential) => {
+            const uid = userCredential.user.uid;
+            console.log("User created, UID:", uid);
+
+            set(ref(database, 'users/' + uid), {
+                enroll: tempRegistrationData.enroll,
+                name: tempRegistrationData.name,
+                email: tempRegistrationData.email,
+                salesLine: tempRegistrationData.salesLine,
+                unit: tempRegistrationData.unit,
+                createdAt: new Date().toISOString()
+            }).then(() => {
+                console.log("User data saved to RTDB");
+                toggleLoading('btnVerifyOTP', false, defaultBtnHtml);
+                alert('অভিনন্দন! আপনার অ্যাকাউন্টটি সফলভাবে ভেরিফাইড এবং রেজিস্টার্ড হয়েছে।');
+                document.getElementById('otpInput').value = "";
+                switchView(loginView);
+            }).catch(dbErr => {
+                console.error("RTDB save error:", dbErr);
+                toggleLoading('btnVerifyOTP', false, defaultBtnHtml);
+                alert('ডাটাবেজে তথ্য সংরক্ষণে ত্রুটি: ' + dbErr.message);
+            });
+        })
+        .catch((authErr) => {
+            console.error("Auth error:", authErr);
+            toggleLoading('btnVerifyOTP', false, defaultBtnHtml);
+            alert('অথেন্টিকেশন প্রসেস ব্যর্থ হয়েছে: ' + authErr.message);
+        });
+});
