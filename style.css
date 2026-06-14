@@ -460,3 +460,20 @@ body {
 }
 
 /* বাকি স্টাইল (approval-table, th, td) আগের মতোই থাকবে, কোনো পরিবর্তন দরকার নেই */
+
+/* Manage Units Styles */
+.unit-card h3 {
+    font-size: 18px;
+}
+
+.unit-card button {
+    transition: all 0.2s;
+}
+
+.unit-card button:hover {
+    filter: brightness(1.1);
+}
+
+.add-unit-form input {
+    font-size: 14px;
+}

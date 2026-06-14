@@ -6,7 +6,7 @@ import {
   updatePassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, update, onValue, off, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Firebase Config
 const firebaseConfig = {
@@ -231,6 +231,14 @@ function showMainApp() {
   } else {
     document.getElementById('adminApprovalsMenu').style.display = 'none';
   }
+
+  if (currentUser.role === 'admin') {
+      document.getElementById('adminApprovalsMenu').style.display = 'block';
+      document.getElementById('adminManageUnitsMenu').style.display = 'block';  // ✅ নতুন লাইন
+  } else {
+      document.getElementById('adminApprovalsMenu').style.display = 'none';
+      document.getElementById('adminManageUnitsMenu').style.display = 'none';   // ✅ নতুন লাইন
+  }
   
   // Activate default dashboard view
   document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
@@ -299,6 +307,11 @@ function switchSubView(viewId) {
   document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById(viewId + '-view');
   if (target) target.classList.add('active');
+
+  // যদি Manage Units ভিউ হয়, তাহলে ডাটা লোড করো
+  if (viewId === 'manageUnits') {
+    loadManageUnits();
+  }
 }
 
 // ---------- ADMIN: LOAD PENDING USERS ----------
@@ -374,6 +387,191 @@ function loadPendingUsers() {
           alert('ইউজার বাতিল করা হয়েছে।');
         }
       });
+    });
+  });
+}
+
+// ========== MANAGE UNITS ==========
+function loadManageUnits() {
+  const container = document.getElementById('manageUnitsContainer');
+  const unitsRef = ref(database, 'units');
+
+  // প্রথমে লোডিং দেখাই
+  container.innerHTML = '<p>লোড হচ্ছে...</p>';
+
+  onValue(unitsRef, (snapshot) => {
+    const units = snapshot.val();
+    container.innerHTML = '';
+
+    // ---- অ্যাড ইউনিট ফর্ম ----
+    const formHtml = `
+      <div class="add-unit-form" style="background:#fff; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+        <h3 style="margin-bottom:15px; color:#1e3c72;">নতুন ইউনিট যোগ করুন</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <input type="text" id="newUnitName" placeholder="ইউনিটের পূর্ণ নাম" style="flex:1; min-width:200px; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+          <input type="text" id="newUnitCode" placeholder="শর্ট কোড (যেমন: AFBL)" style="flex:1; min-width:150px; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+          <button id="btnAddUnit" class="btn btn-primary" style="width:auto; padding: 10px 20px;">ইউনিট যুক্ত করুন</button>
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', formHtml);
+
+    // ---- ইউনিট লিস্ট ----
+    if (!units) {
+      container.insertAdjacentHTML('beforeend', '<p class="empty-message">এখনো কোনো ইউনিট নেই।</p>');
+    } else {
+      Object.entries(units).forEach(([unitId, unit]) => {
+        const unitCard = document.createElement('div');
+        unitCard.className = 'unit-card';
+        unitCard.style.cssText = 'background:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.08);';
+
+        let salesLinesHtml = '';
+        if (unit.salesLines && unit.salesLines.length > 0) {
+          salesLinesHtml = '<ul style="list-style:none; padding-left:0;">';
+          unit.salesLines.forEach((line, index) => {
+            salesLinesHtml += `
+              <li style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                <span style="flex:1;">${line}</span>
+                <button class="btn-edit-line" data-unit-id="${unitId}" data-index="${index}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Edit</button>
+                <button class="btn-delete-line" data-unit-id="${unitId}" data-index="${index}" style="background:#e53e3e; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Delete</button>
+              </li>
+            `;
+          });
+          salesLinesHtml += '</ul>';
+        } else {
+          salesLinesHtml = '<p style="color:#64748b;">কোনো সেলস লাইন নেই।</p>';
+        }
+
+        unitCard.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0; color:#1e3c72;">${unit.name} (${unit.shortCode})</h3>
+            <button class="btn-delete-unit" data-unit-id="${unitId}" style="background:#dc2626; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer;">Delete Unit</button>
+          </div>
+          <div style="margin-top:10px;">
+            <strong style="color:#334155;">সেলস লাইন:</strong>
+            <div style="margin-top:10px;">
+              ${salesLinesHtml}
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px;">
+              <input type="text" class="input-add-line" placeholder="নতুন সেলস লাইন যোগ করুন" style="flex:1; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+              <button class="btn-add-line" data-unit-id="${unitId}" style="background:#38a169; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer;">Add Line</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(unitCard);
+      });
+    }
+
+    // ---- ইভেন্ট লিসেনার অ্যাটাচ করা (অ্যাড ইউনিট) ----
+    document.getElementById('btnAddUnit').addEventListener('click', async () => {
+      const name = document.getElementById('newUnitName').value.trim();
+      const code = document.getElementById('newUnitCode').value.trim();
+      if (!name || !code) {
+        alert('নাম ও কোড পূরণ করুন।');
+        return;
+      }
+      try {
+        const newUnitRef = ref(database, 'units');
+        await push(newUnitRef, {
+          name: name,
+          shortCode: code,
+          salesLines: []  // শুরুতে খালি
+        });
+        document.getElementById('newUnitName').value = '';
+        document.getElementById('newUnitCode').value = '';
+        // loadManageUnits আবার কল হবে onValue-র কারণে স্বয়ংক্রিয়ভাবে
+      } catch (err) {
+        alert('ইউনিট যোগ করতে সমস্যা: ' + err.message);
+      }
+    });
+
+    // ---- ইভেন্ট লিসেনার অ্যাটাচ (এডিট/ডিলিট সেলস লাইন ও ডিলিট ইউনিট) ----
+    attachUnitEventListeners();
+  });
+}
+
+function attachUnitEventListeners() {
+  // অ্যাড লাইন
+  document.querySelectorAll('.btn-add-line').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const unitId = e.target.getAttribute('data-unit-id');
+      const inputField = e.target.parentElement.querySelector('.input-add-line');
+      const newLine = inputField.value.trim();
+      if (!newLine) {
+        alert('সেলস লাইন লিখুন।');
+        return;
+      }
+      try {
+        const unitRef = ref(database, 'units/' + unitId);
+        const snap = await get(unitRef);
+        if (snap.exists()) {
+          const unit = snap.val();
+          const updatedLines = unit.salesLines ? [...unit.salesLines, newLine] : [newLine];
+          await update(unitRef, { salesLines: updatedLines });
+          inputField.value = '';
+        }
+      } catch (err) {
+        alert('লাইন যোগ করতে সমস্যা: ' + err.message);
+      }
+    });
+  });
+
+  // এডিট লাইন
+  document.querySelectorAll('.btn-edit-line').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const unitId = e.target.getAttribute('data-unit-id');
+      const index = parseInt(e.target.getAttribute('data-index'));
+      const unitRef = ref(database, 'units/' + unitId);
+      const snap = await get(unitRef);
+      if (snap.exists()) {
+        const unit = snap.val();
+        const currentLine = unit.salesLines[index];
+        const newLine = prompt('সেলস লাইন এডিট করুন:', currentLine);
+        if (newLine !== null && newLine.trim() !== '') {
+          try {
+            const updatedLines = [...unit.salesLines];
+            updatedLines[index] = newLine.trim();
+            await update(unitRef, { salesLines: updatedLines });
+          } catch (err) {
+            alert('এডিট করতে সমস্যা: ' + err.message);
+          }
+        }
+      }
+    });
+  });
+
+  // ডিলিট লাইন
+  document.querySelectorAll('.btn-delete-line').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('এই সেলস লাইনটি মুছে ফেলতে চান?')) return;
+      const unitId = e.target.getAttribute('data-unit-id');
+      const index = parseInt(e.target.getAttribute('data-index'));
+      const unitRef = ref(database, 'units/' + unitId);
+      const snap = await get(unitRef);
+      if (snap.exists()) {
+        const unit = snap.val();
+        const updatedLines = unit.salesLines.filter((_, i) => i !== index);
+        try {
+          await update(unitRef, { salesLines: updatedLines });
+        } catch (err) {
+          alert('ডিলিট করতে সমস্যা: ' + err.message);
+        }
+      }
+    });
+  });
+
+  // ডিলিট ইউনিট
+  document.querySelectorAll('.btn-delete-unit').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('সম্পূর্ণ ইউনিটটি মুছে ফেলতে চান? এর সমস্ত সেলস লাইনও চলে যাবে।')) return;
+      const unitId = e.target.getAttribute('data-unit-id');
+      try {
+        await set(ref(database, 'units/' + unitId), null);
+        alert('ইউনিট মুছে ফেলা হয়েছে।');
+      } catch (err) {
+        alert('মুছতে সমস্যা: ' + err.message);
+      }
     });
   });
 }
