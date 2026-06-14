@@ -354,7 +354,6 @@ function loadPendingUsers() {
       return;
     }
     
-    container.appendChild(table);
     
     // Attach event listeners for approve/reject
     container.querySelectorAll('.btn-approve').forEach(btn => {

@@ -363,7 +363,7 @@ body {
 .nav-logo {
     height: 40px;
     width: auto;
-    display; block;
+    display: block;
     max-width: 100%;
     object-fit: contain;
 }
