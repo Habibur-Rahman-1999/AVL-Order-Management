@@ -161,7 +161,6 @@
             <div id="dashboard-view" class="sub-view active">
                 <h2>ড্যাশবোর্ড</h2>
                 <p>স্বাগতম, <span id="loggedUserName"></span>! আপনি সফলভাবে লগইন করেছেন।</p>
-                <!-- ভবিষ্যতে পরিসংখ্যান যুক্ত করা যাবে -->
             </div>
             <div id="orderForm-view" class="sub-view">
                 <h2>অর্ডার ফর্ম</h2>
@@ -212,11 +211,11 @@
                 <div id="allUsersContainer">লোড হচ্ছে...</div>
             </div>
 
-            <!-- Manage Units View (unchanged) -->
+            <!-- Manage Units View -->
             <div id="manageUnits-view" class="sub-view">
                 <h2>ইউনিট ম্যানেজমেন্ট</h2>
                 <div id="manageUnitsContainer">
-                    <!-- এখানে অ্যাড ইউনিট ফর্ম ও ইউনিট লিস্ট জাভাস্ক্রিপ্ট দিয়ে বসবে -->
+                    <!-- ডায়নামিক কন্টেন্ট -->
                 </div>
             </div>
         </div>
@@ -290,17 +289,13 @@
                 }
             }
         }
-    </script>
-    <script>
+
         // হ্যামবার্গার মেনু টগল
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const navMenu = document.getElementById('navMenu');
-
         hamburgerBtn.addEventListener('click', () => {
             navMenu.classList.toggle('show');
         });
-
-        // মেনুর ভিতরের যে কোনো লিংকে ক্লিক করলে মেনু বন্ধ করে দাও (মোবাইলে)
         navMenu.querySelectorAll('a[data-view]').forEach(link => {
             link.addEventListener('click', () => {
                 if (window.innerWidth <= 768) {
