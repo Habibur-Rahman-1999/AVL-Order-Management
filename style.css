@@ -1,6 +1,5 @@
 /* ========== MERGED CSS: Base from first block + essential additions from second block ========== */
 
-/* Reset & Typography Base (combined from both sources, using full font stack) */
 * {
     margin: 0;
     padding: 0;
@@ -17,7 +16,6 @@ body {
     padding: 20px;
 }
 
-/* Glassmorphism Wrapper Dynamic Layout */
 .login-container {
     background: rgba(255, 255, 255, 0.98);
     width: 100%;
@@ -29,7 +27,6 @@ body {
     overflow: hidden;
 }
 
-/* ---------- MAIN APPLICATION WRAPPER ---------- */
 .main-app-container {
     width: 100%;
     max-width: 1000px;
@@ -111,7 +108,6 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-/* ---------- AUTH VIEWS (Login, Register, OTP) ---------- */
 .auth-view {
     display: none;
 }
@@ -126,7 +122,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Top Header Component */
 .login-header {
     text-align: center;
     margin-bottom: 25px;
@@ -159,7 +154,6 @@ body {
     margin-top: 4px;
 }
 
-/* Custom Structure Form Fields */
 .input-group {
     margin-bottom: 16px;
 }
@@ -185,7 +179,6 @@ body {
     font-size: 14px;
 }
 
-/* General input/select styling */
 .input-wrapper input, 
 .input-wrapper select {
     width: 100%;
@@ -200,7 +193,6 @@ body {
     appearance: none;
 }
 
-/* Password fields need extra right padding for the toggle icon */
 .input-wrapper input[type="password"] {
     padding-right: 40px;
 }
@@ -220,18 +212,16 @@ body {
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
-/* Toggle password visibility icon (added from second CSS) */
 .toggle-icon {
     position: absolute;
     right: 12px;
     cursor: pointer;
     color: #64748b;
     font-size: 15px;
-    pointer-events: auto; /* ensure clickable */
+    pointer-events: auto;
     z-index: 2;
 }
 
-/* Flexible Premium Action Buttons */
 .action-buttons {
     display: flex;
     flex-direction: column;
@@ -293,7 +283,6 @@ body {
     filter: brightness(0.95);
 }
 
-/* Loading & Disabled Button State Architecture */
 .btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
@@ -302,7 +291,6 @@ body {
     pointer-events: none;
 }
 
-/* ---------- TABLE STYLES FOR APPROVALS ---------- */
 .approval-table {
     width: 100%;
     border-collapse: collapse;
@@ -379,9 +367,6 @@ body {
     }
 }
 
-/* ========== হ্যামবার্গার মেনুর জন্য স্টাইল ========== */
-
-/* ডিফল্টভাবে হ্যামবার্গার বাটন লুকানো থাকবে (ডেস্কটপে) */
 .hamburger {
     display: none;
     background: none;
@@ -392,30 +377,25 @@ body {
     padding: 10px;
 }
 
-/* মোবাইলের জন্য (সর্বোচ্চ 768px-এর নিচে) */
 @media (max-width: 768px) {
-    /* হ্যামবার্গার বাটন দেখাও */
     .hamburger {
         display: block;
-        order: 1;           /* logo-র পরেই বসবে */
+        order: 1;
     }
 
-    /* nav-menu কে পুরোপুরি লুকিয়ে দাও এবং স্টাইল রিসেট করো */
     .nav-menu {
-        display: none;                     /* ডিফল্ট লুকানো */
-        flex-direction: column;            /* উল্লম্ব করে দাও */
-        width: 100%;                       /* পুরো প্রস্থ নেবে */
-        background: #1e3c72;              /* ব্যাকগ্রাউন্ড নেভবারের মতোই */
-        order: 3;                          /* লোগো ও হ্যামবার্গারের নিচে চলে আসবে */
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #1e3c72;
+        order: 3;
         border-radius: 0 0 8px 8px;
     }
 
-    /* যখন 'show' ক্লাস যোগ করা হবে, তখন দেখাবে */
     .nav-menu.show {
         display: flex;
     }
 
-    /* প্রতিটি মেনু আইটেমকে ব্লক করে নাও */
     .nav-menu li {
         width: 100%;
         text-align: center;
@@ -428,40 +408,33 @@ body {
         border-radius: 0;
     }
 
-    /* লগআউট বাটনও পুরো চওড়া করে দিতে পারি, কিন্তু সেটা আগের মতো থাক */
     .logout-btn {
-        order: 2;             /* হ্যামবার্গারের পাশে ডানদিকে থাকবে */
-        margin-left: auto;    /* আগের মতোই ডানে থাকবে */
+        order: 2;
+        margin-left: auto;
     }
 
-    /* nav-brand এর প্যাডিং কমাও */
     .nav-brand {
         padding: 10px 0;
         margin-right: 10px;
     }
 }
 
-/* টেবিলকে ঘিরে রাখা কন্টেইনার: মোবাইলে স্ক্রল হবে */
 .table-responsive {
     width: 100%;
-    overflow-x: auto;          /* প্রয়োজনে অনুভূমিক স্ক্রলবার দেখাবে */
-    -webkit-overflow-scrolling: touch;  /* iOS-এ স্মুথ স্ক্রল */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     margin-top: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-/* টেবিলের ভিতরের কন্টেন্ট যেন স্ক্রলের সময় নষ্ট না হয় */
 .table-responsive .approval-table {
-    min-width: 600px;          /* টেবিল ন্যূনতম 600px চওড়া হবে, মোবাইলেও */
+    min-width: 600px;
     width: 100%;
     border-collapse: collapse;
     background: white;
 }
 
-/* বাকি স্টাইল (approval-table, th, td) আগের মতোই থাকবে, কোনো পরিবর্তন দরকার নেই */
-
-/* Manage Units Styles */
 .unit-card h3 {
     font-size: 18px;
 }
@@ -478,7 +451,6 @@ body {
     font-size: 14px;
 }
 
-/* মোবাইলে সেলস লাইন অ্যাড করার অংশ উল্লম্ব করে দাও */
 @media (max-width: 500px) {
     .add-line-row {
         flex-direction: column !important;
@@ -490,4 +462,16 @@ body {
     .add-line-row button {
         width: 100% !important;
     }
+}
+
+#editUserModal > div {
+    animation: fadeIn 0.2s ease;
+}
+
+.edit-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
 }

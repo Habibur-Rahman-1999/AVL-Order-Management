@@ -197,15 +197,77 @@
                     </div>
                 </form>
             </div>
+
+            <!-- Updated User Approvals View -->
             <div id="userApprovals-view" class="sub-view">
-                <h2>ইউজার অনুমোদন (Pending Approvals)</h2>
-                <div id="pendingUsersContainer">লোড হচ্ছে...</div>
+                <h2>ইউজার ম্যানেজমেন্ট</h2>
+                
+                <!-- সার্চ ও এক্সপোর্ট রো -->
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    <input type="text" id="userSearchInput" placeholder="Enroll ID বা ইমেইল দিয়ে সার্চ করুন" style="flex:1; min-width:200px; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                    <button id="btnExportUsers" class="btn btn-primary" style="width:auto; padding:10px 20px;"><i class="fas fa-download"></i> এক্সপোর্ট (CSV)</button>
+                </div>
+
+                <!-- ইউজার টেবিল কন্টেইনার -->
+                <div id="allUsersContainer">লোড হচ্ছে...</div>
             </div>
+
+            <!-- Manage Units View (unchanged) -->
             <div id="manageUnits-view" class="sub-view">
                 <h2>ইউনিট ম্যানেজমেন্ট</h2>
                 <div id="manageUnitsContainer">
                     <!-- এখানে অ্যাড ইউনিট ফর্ম ও ইউনিট লিস্ট জাভাস্ক্রিপ্ট দিয়ে বসবে -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:100;">
+        <div style="background:#fff; padding:25px; border-radius:12px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
+            <h3>ইউজার তথ্য এডিট করুন</h3>
+            <div class="input-group">
+                <label>নাম</label>
+                <input type="text" id="editUserName" class="edit-input">
+            </div>
+            <div class="input-group">
+                <label>ইমেইল</label>
+                <input type="email" id="editUserEmail" class="edit-input">
+            </div>
+            <div class="input-group">
+                <label>Enroll ID</label>
+                <input type="text" id="editUserEnroll" class="edit-input">
+            </div>
+            <div class="input-group">
+                <label>রোল</label>
+                <select id="editUserRole" class="edit-input">
+                    <option value="manager">Manager</option>
+                    <option value="sales">Sales</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>ইউনিট</label>
+                <select id="editUserUnit" class="edit-input">
+                    <option value="">সিলেক্ট করুন</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>সেলস লাইন</label>
+                <select id="editUserSalesLine" class="edit-input">
+                    <option value="">প্রথমে ইউনিট সিলেক্ট করুন</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>স্ট্যাটাস</label>
+                <select id="editUserStatus" class="edit-input">
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:15px;">
+                <button id="btnSaveEditUser" class="btn btn-primary" style="width:auto;">Save</button>
+                <button id="btnCloseModal" class="btn btn-danger" style="width:auto;">Cancel</button>
             </div>
         </div>
     </div>

@@ -26,6 +26,7 @@ const database = getDatabase(app);
 // Global state
 let generatedOTP = null;
 let tempRegistrationData = {};
+let allUsersCache = {}; // ক্যাশে রাখব যাতে সার্চ ও এক্সপোর্ট সহজ হয়
 
 // Current logged-in user data
 let currentUser = {
@@ -125,12 +126,11 @@ function toggleLoading(buttonId, isLoading, defaultHtml) {
 
 // স্ট্রং পাসওয়ার্ড চেক
 function isPasswordStrong(password) {
-  // কমপক্ষে 8 অক্ষর, বড় হাতের, ছোট হাতের, সংখ্যা, বিশেষ চিহ্ন
   const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
   return strongRegex.test(password);
 }
 
-// Enroll ID ডুপ্লিকেট চেক (users নোডে সব ইউজারের enroll ফিল্ডের সাথে মিলিয়ে)
+// Enroll ID ডুপ্লিকেট চেক
 async function isEnrollDuplicate(enroll) {
   const usersRef = ref(database, 'users');
   const snapshot = await get(usersRef);
@@ -161,7 +161,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
   signInWithEmailAndPassword(auth, email, password)
     .then(async (userCredential) => {
       const user = userCredential.user;
-      // Fetch user record from Realtime Database
       const userRef = ref(database, 'users/' + user.uid);
       const snap = await get(userRef);
       if (!snap.exists()) {
@@ -172,7 +171,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
       }
       const userData = snap.val();
       
-      // Check approval status
       if (userData.status !== 'approved') {
         await signOut(auth);
         toggleLoading('btnLogin', false, defaultHtml);
@@ -180,7 +178,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         return;
       }
       
-      // Determine role: if email exists in admins node, assign 'admin', else role from userData
       const adminsRef = ref(database, 'admins');
       const adminsSnap = await get(adminsRef);
       const admins = adminsSnap.val() || {};
@@ -195,7 +192,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
       };
       
       toggleLoading('btnLogin', false, defaultHtml);
-      // Switch to main application
       showMainApp();
     })
     .catch(err => {
@@ -217,32 +213,26 @@ document.getElementById('btnSendOTP').addEventListener('click', async () => {
   const password = document.getElementById('regPassword').value;
   const defaultHtml = `<i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান`;
 
-  // ভ্যালিডেশন
   if (!enroll || !name || !email || !unitId || !salesLine || !role || !password) {
     alert('সকল ঘর পূরণ করুন।');
     return;
   }
-  // Enroll ID শুধু সংখ্যা
   if (!/^\d+$/.test(enroll)) {
     alert('Enroll ID শুধুমাত্র সংখ্যা হতে হবে।');
     return;
   }
-  // নাম শুধু ইংরেজি অক্ষর
   if (!isValidName(name)) {
     alert('নাম শুধুমাত্র ইংরেজি অক্ষর ও স্পেস হতে পারে।');
     return;
   }
-  // ইমেইল ফরম্যাট
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     alert('সঠিক ইমেইল ফরম্যাট প্রদান করুন।');
     return;
   }
-  // পাসওয়ার্ড স্ট্রং
   if (!isPasswordStrong(password)) {
     alert('পাসওয়ার্ডে অন্তত ৮ অক্ষর, একটি বড় হাতের, একটি ছোট হাতের, একটি সংখ্যা ও একটি বিশেষ চিহ্ন (যেমন !@#$%) থাকতে হবে।');
     return;
   }
-  // Enroll ID ডুপ্লিকেট চেক
   const duplicate = await isEnrollDuplicate(enroll);
   if (duplicate) {
     alert('এই Enroll ID ইতিমধ্যে নিবন্ধিত।');
@@ -289,11 +279,9 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
   
   toggleLoading('btnVerifyOTP', true, defaultHtml);
   
-  // Create Firebase Auth user
   createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.password)
     .then(async (userCredential) => {
       const uid = userCredential.user.uid;
-      // Save user data with status 'pending'
       await set(ref(database, 'users/' + uid), {
         enroll: tempRegistrationData.enroll,
         name: tempRegistrationData.name,
@@ -306,7 +294,6 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
         createdAt: new Date().toISOString()
       });
       
-      // Sign out the newly created user (they must be approved first)
       await signOut(auth);
       
       toggleLoading('btnVerifyOTP', false, defaultHtml);
@@ -322,54 +309,45 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
 
 // ---------- MAIN APP LOGIC ----------
 function showMainApp() {
-  // Hide all auth views
   document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
-  mainAppView.style.display = 'flex';  // because it's flex container
+  mainAppView.style.display = 'flex';
   mainAppView.classList.add('active');
   
-  // Set logged-in user name
   document.getElementById('loggedUserName').textContent = currentUser.name;
   
-  // Show/hide menus based on role
   if (currentUser.role === 'admin') {
     document.getElementById('adminApprovalsMenu').style.display = 'block';
     document.getElementById('adminManageUnitsMenu').style.display = 'block';
   } else if (currentUser.role === 'manager') {
     document.getElementById('adminApprovalsMenu').style.display = 'none';
     document.getElementById('adminManageUnitsMenu').style.display = 'block';
-  } else { // sales
+  } else {
     document.getElementById('adminApprovalsMenu').style.display = 'none';
     document.getElementById('adminManageUnitsMenu').style.display = 'none';
   }
   
-  // Activate default dashboard view
   document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
   document.getElementById('dashboard-view').classList.add('active');
   
-  // Navigation click handlers
   const navLinks = document.querySelectorAll('.nav-menu li a[data-view]');
   navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const viewId = link.getAttribute('data-view');
       switchSubView(viewId);
-      // Update active class
       navLinks.forEach(l => l.classList.remove('active'));
       link.classList.add('active');
     });
   });
   
-  // Logout
   document.getElementById('btnLogout').addEventListener('click', async () => {
     await signOut(auth);
     mainAppView.style.display = 'none';
     mainAppView.classList.remove('active');
     switchAuthView(loginView);
-    // Clear currentUser
     currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
   });
   
-  // Password update (Reset Password inside app)
   document.getElementById('btnUpdatePassword').addEventListener('click', () => {
     const newPass = document.getElementById('newPass').value;
     const confirmPass = document.getElementById('confirmNewPass').value;
@@ -398,11 +376,6 @@ function showMainApp() {
         alert('আপডেট ব্যর্থ: ' + err.message);
       });
   });
-  
-  // If admin, load pending users
-  if (currentUser.role === 'admin') {
-    loadPendingUsers();
-  }
 }
 
 function switchSubView(viewId) {
@@ -410,101 +383,256 @@ function switchSubView(viewId) {
   const target = document.getElementById(viewId + '-view');
   if (target) target.classList.add('active');
 
-  // যদি Manage Units ভিউ হয়, তাহলে ডাটা লোড করো
   if (viewId === 'manageUnits') {
     loadManageUnits();
+  } else if (viewId === 'userApprovals') {
+    loadUserManagement();
   }
 }
 
-// ---------- ADMIN: LOAD PENDING USERS ----------
-function loadPendingUsers() {
-  const container = document.getElementById('pendingUsersContainer');
+// ========== USER MANAGEMENT ==========
+function loadUserManagement() {
+  const container = document.getElementById('allUsersContainer');
   const usersRef = ref(database, 'users');
   
   onValue(usersRef, (snapshot) => {
-    const users = snapshot.val();
-    container.innerHTML = '';
-    if (!users) {
-      container.innerHTML = '<p class="empty-message">কোনো ইউজার নেই।</p>';
-      return;
-    }
-    
-    let pendingFound = false;
-    const table = document.createElement('table');
-    table.className = 'approval-table';
-    table.innerHTML = `
-      <thead><tr><th>নাম</th><th>ইমেইল</th><th>Enroll ID</th><th>Sales Line</th><th>Unit</th><th>Role</th><th>Action</th></tr></thead>
-      <tbody></tbody>
-    `;
-    const tbody = table.querySelector('tbody');
-    
-    Object.entries(users).forEach(([uid, user]) => {
-      if (user.status === 'pending') {
-        pendingFound = true;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${user.name}</td>
-          <td>${user.email}</td>
-          <td>${user.enroll}</td>
-          <td>${user.salesLine || ''}</td>
-          <td>${user.unitShortCode || user.unit || ''}</td>
-          <td>${user.role || 'sales'}</td>
-          <td>
-            <button class="btn-approve" data-uid="${uid}">Approve</button>
-            <button class="btn-reject" data-uid="${uid}">Reject</button>
-          </td>
-        `;
-        tbody.appendChild(row);
+    allUsersCache = snapshot.val() || {};
+    renderUserTable(allUsersCache);
+  });
+
+  document.getElementById('userSearchInput').addEventListener('input', (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    if (!allUsersCache) return;
+    const filtered = {};
+    Object.entries(allUsersCache).forEach(([uid, user]) => {
+      if (user.enroll?.toLowerCase().includes(term) || user.email?.toLowerCase().includes(term)) {
+        filtered[uid] = user;
       }
     });
-    
-    if (!pendingFound) {
-      container.innerHTML = '<p class="empty-message">কোনো পেন্ডিং ইউজার নেই।</p>';
-      return;
-    }
-    
-    // Wrap table in responsive container for mobile scrolling
-    const tableWrapper = document.createElement('div');
-    tableWrapper.className = 'table-responsive';
-    tableWrapper.appendChild(table);
-    container.appendChild(tableWrapper);
-    
-    // Attach event listeners for approve/reject
-    container.querySelectorAll('.btn-approve').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const uid = e.target.getAttribute('data-uid');
-        if (confirm('এই ইউজারকে অনুমোদন করতে চান?')) {
-          await update(ref(database, 'users/' + uid), { status: 'approved' });
-          alert('ইউজার অনুমোদিত হয়েছে।');
-        }
-      });
+    renderUserTable(filtered);
+  });
+
+  document.getElementById('btnExportUsers').addEventListener('click', () => {
+    exportUsersToCSV(allUsersCache);
+  });
+}
+
+function renderUserTable(users) {
+  const container = document.getElementById('allUsersContainer');
+  container.innerHTML = '';
+
+  if (!users || Object.keys(users).length === 0) {
+    container.innerHTML = '<p class="empty-message">কোনো ইউজার পাওয়া যায়নি।</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'approval-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>নাম</th>
+        <th>ইমেইল</th>
+        <th>Enroll ID</th>
+        <th>Sales Line</th>
+        <th>Unit</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  Object.entries(users).forEach(([uid, user]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${user.name}</td>
+      <td>${user.email}</td>
+      <td>${user.enroll}</td>
+      <td>${user.salesLine || ''}</td>
+      <td>${user.unitShortCode || user.unit || ''}</td>
+      <td>${user.role || 'sales'}</td>
+      <td>${user.status}</td>
+      <td>
+        <button class="btn-edit-user" data-uid="${uid}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:4px;">Edit</button>
+        <button class="btn-delete-user" data-uid="${uid}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-responsive';
+  tableWrapper.appendChild(table);
+  container.appendChild(tableWrapper);
+
+  attachUserActions(users);
+}
+
+function attachUserActions(users) {
+  document.querySelectorAll('.btn-edit-user').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const uid = e.target.getAttribute('data-uid');
+      const user = users[uid];
+      if (!user) return;
+      openEditUserModal(uid, user);
     });
-    
-    container.querySelectorAll('.btn-reject').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const uid = e.target.getAttribute('data-uid');
-        if (confirm('এই ইউজারকে বাতিল করতে চান? (ইমেইলটি পুনরায় ব্যবহার করা যাবে না)')) {
-          await update(ref(database, 'users/' + uid), { status: 'rejected' });
-          alert('ইউজার বাতিল করা হয়েছে।');
-        }
-      });
+  });
+
+  document.querySelectorAll('.btn-delete-user').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('এই ইউজারকে সম্পূর্ণ মুছে ফেলতে চান? এটি পরবর্তীতে আর ফেরত আনা যাবে না।')) return;
+      const uid = e.target.getAttribute('data-uid');
+      try {
+        await set(ref(database, 'users/' + uid), null);
+        alert('ইউজার ডিলিট করা হয়েছে।');
+      } catch (err) {
+        alert('ডিলিট করতে সমস্যা: ' + err.message);
+      }
     });
   });
 }
+
+function exportUsersToCSV(users) {
+  if (!users || Object.keys(users).length === 0) {
+    alert('এক্সপোর্ট করার মতো কোনো ইউজার নেই।');
+    return;
+  }
+
+  const rows = [['Name', 'Email', 'Enroll ID', 'Sales Line', 'Unit', 'Role', 'Status']];
+  Object.values(users).forEach(user => {
+    rows.push([
+      user.name || '',
+      user.email || '',
+      user.enroll || '',
+      user.salesLine || '',
+      user.unitShortCode || user.unit || '',
+      user.role || 'sales',
+      user.status || ''
+    ]);
+  });
+
+  let csvContent = '';
+  rows.forEach(row => {
+    const escapedRow = row.map(cell => `"${cell.replace(/"/g, '""')}"`);
+    csvContent += escapedRow.join(',') + '\n';
+  });
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `users_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+// ========== EDIT USER MODAL ==========
+let editingUserId = null;
+const modal = document.getElementById('editUserModal');
+const btnCloseModal = document.getElementById('btnCloseModal');
+const btnSaveEdit = document.getElementById('btnSaveEditUser');
+
+btnCloseModal.addEventListener('click', () => {
+  modal.style.display = 'none';
+  editingUserId = null;
+});
+
+window.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    modal.style.display = 'none';
+    editingUserId = null;
+  }
+});
+
+async function openEditUserModal(uid, userData) {
+  editingUserId = uid;
+
+  document.getElementById('editUserName').value = userData.name || '';
+  document.getElementById('editUserEmail').value = userData.email || '';
+  document.getElementById('editUserEnroll').value = userData.enroll || '';
+  document.getElementById('editUserRole').value = userData.role || 'sales';
+  document.getElementById('editUserStatus').value = userData.status || 'pending';
+
+  const unitSelect = document.getElementById('editUserUnit');
+  const lineSelect = document.getElementById('editUserSalesLine');
+  const unitsRef = ref(database, 'units');
+  const unitsSnap = await get(unitsRef);
+  const units = unitsSnap.val() || {};
+
+  unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+  Object.entries(units).forEach(([unitId, unit]) => {
+    const option = document.createElement('option');
+    option.value = unitId;
+    option.textContent = unit.shortCode;
+    if (unitId === userData.unitId) option.selected = true;
+    unitSelect.appendChild(option);
+  });
+
+  const updateLines = async () => {
+    const selectedUnitId = unitSelect.value;
+    lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+    if (!selectedUnitId) return;
+
+    const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+    const unitData = unitSnap.val();
+    if (unitData && unitData.salesLines) {
+      unitData.salesLines.forEach(line => {
+        const opt = document.createElement('option');
+        opt.value = line;
+        opt.textContent = line;
+        if (line === userData.salesLine) opt.selected = true;
+        lineSelect.appendChild(opt);
+      });
+    }
+  };
+
+  unitSelect.addEventListener('change', updateLines);
+  if (unitSelect.value) await updateLines();
+
+  modal.style.display = 'flex';
+}
+
+btnSaveEdit.addEventListener('click', async () => {
+  if (!editingUserId) return;
+
+  const updatedData = {
+    name: document.getElementById('editUserName').value.trim(),
+    email: document.getElementById('editUserEmail').value.trim(),
+    enroll: document.getElementById('editUserEnroll').value.trim(),
+    role: document.getElementById('editUserRole').value,
+    status: document.getElementById('editUserStatus').value,
+    unitId: document.getElementById('editUserUnit').value,
+    unitShortCode: document.getElementById('editUserUnit').selectedOptions[0]?.text || '',
+    salesLine: document.getElementById('editUserSalesLine').value,
+  };
+
+  if (!updatedData.name || !updatedData.email || !updatedData.enroll) {
+    alert('নাম, ইমেইল, Enroll ID ফাঁকা রাখা যাবে না।');
+    return;
+  }
+
+  try {
+    await update(ref(database, 'users/' + editingUserId), updatedData);
+    alert('ইউজার আপডেট সফল হয়েছে।');
+    modal.style.display = 'none';
+    editingUserId = null;
+  } catch (err) {
+    alert('আপডেট ব্যর্থ: ' + err.message);
+  }
+});
 
 // ========== MANAGE UNITS ==========
 function loadManageUnits() {
   const container = document.getElementById('manageUnitsContainer');
   const unitsRef = ref(database, 'units');
 
-  // প্রথমে লোডিং দেখাই
   container.innerHTML = '<p>লোড হচ্ছে...</p>';
 
   onValue(unitsRef, (snapshot) => {
     const units = snapshot.val();
     container.innerHTML = '';
 
-    // ---- অ্যাড ইউনিট ফর্ম ----
     const formHtml = `
       <div class="add-unit-form" style="background:#fff; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
         <h3 style="margin-bottom:15px; color:#1e3c72;">নতুন ইউনিট যোগ করুন</h3>
@@ -517,7 +645,6 @@ function loadManageUnits() {
     `;
     container.insertAdjacentHTML('beforeend', formHtml);
 
-    // ---- ইউনিট লিস্ট ----
     if (!units) {
       container.insertAdjacentHTML('beforeend', '<p class="empty-message">এখনো কোনো ইউনিট নেই।</p>');
     } else {
@@ -564,7 +691,6 @@ function loadManageUnits() {
       });
     }
 
-    // ---- ইভেন্ট লিসেনার অ্যাটাচ করা (অ্যাড ইউনিট) ----
     document.getElementById('btnAddUnit').addEventListener('click', async () => {
       const name = document.getElementById('newUnitName').value.trim();
       const code = document.getElementById('newUnitCode').value.trim();
@@ -577,23 +703,20 @@ function loadManageUnits() {
         await push(newUnitRef, {
           name: name,
           shortCode: code,
-          salesLines: []  // শুরুতে খালি
+          salesLines: []
         });
         document.getElementById('newUnitName').value = '';
         document.getElementById('newUnitCode').value = '';
-        // loadManageUnits আবার কল হবে onValue-র কারণে স্বয়ংক্রিয়ভাবে
       } catch (err) {
         alert('ইউনিট যোগ করতে সমস্যা: ' + err.message);
       }
     });
 
-    // ---- ইভেন্ট লিসেনার অ্যাটাচ (এডিট/ডিলিট সেলস লাইন ও ডিলিট ইউনিট) ----
     attachUnitEventListeners();
   });
 }
 
 function attachUnitEventListeners() {
-  // অ্যাড লাইন
   document.querySelectorAll('.btn-add-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const unitId = e.target.getAttribute('data-unit-id');
@@ -618,7 +741,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // এডিট লাইন
   document.querySelectorAll('.btn-edit-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const unitId = e.target.getAttribute('data-unit-id');
@@ -642,7 +764,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // ডিলিট লাইন
   document.querySelectorAll('.btn-delete-line').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       if (!confirm('এই সেলস লাইনটি মুছে ফেলতে চান?')) return;
@@ -662,7 +783,6 @@ function attachUnitEventListeners() {
     });
   });
 
-  // ডিলিট ইউনিট
   document.querySelectorAll('.btn-delete-unit').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       if (!confirm('সম্পূর্ণ ইউনিটটি মুছে ফেলতে চান? এর সমস্ত সেলস লাইনও চলে যাবে।')) return;
