@@ -440,3 +440,23 @@ body {
         margin-right: 10px;
     }
 }
+
+/* টেবিলকে ঘিরে রাখা কন্টেইনার: মোবাইলে স্ক্রল হবে */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;          /* প্রয়োজনে অনুভূমিক স্ক্রলবার দেখাবে */
+    -webkit-overflow-scrolling: touch;  /* iOS-এ স্মুথ স্ক্রল */
+    margin-top: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* টেবিলের ভিতরের কন্টেন্ট যেন স্ক্রলের সময় নষ্ট না হয় */
+.table-responsive .approval-table {
+    min-width: 600px;          /* টেবিল ন্যূনতম 600px চওড়া হবে, মোবাইলেও */
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+/* বাকি স্টাইল (approval-table, th, td) আগের মতোই থাকবে, কোনো পরিবর্তন দরকার নেই */

@@ -341,6 +341,13 @@ function loadPendingUsers() {
         tbody.appendChild(row);
       }
     });
+    // এখন টেবিলকে একটি responsive ডিভের ভিতরে পুরে দিচ্ছি
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-responsive';
+    tableWrapper.appendChild(table);
+
+    // কন্টেইনারে সেই ডিভটি যোগ করছি
+    container.appendChild(tableWrapper);
     
     if (!pendingFound) {
       container.innerHTML = '<p class="empty-message">কোনো পেন্ডিং ইউজার নেই।</p>';
