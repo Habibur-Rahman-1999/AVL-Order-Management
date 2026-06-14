@@ -378,3 +378,65 @@ body {
         margin-right: 10px;
     }
 }
+
+/* ========== হ্যামবার্গার মেনুর জন্য স্টাইল ========== */
+
+/* ডিফল্টভাবে হ্যামবার্গার বাটন লুকানো থাকবে (ডেস্কটপে) */
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+}
+
+/* মোবাইলের জন্য (সর্বোচ্চ 768px-এর নিচে) */
+@media (max-width: 768px) {
+    /* হ্যামবার্গার বাটন দেখাও */
+    .hamburger {
+        display: block;
+        order: 1;           /* logo-র পরেই বসবে */
+    }
+
+    /* nav-menu কে পুরোপুরি লুকিয়ে দাও এবং স্টাইল রিসেট করো */
+    .nav-menu {
+        display: none;                     /* ডিফল্ট লুকানো */
+        flex-direction: column;            /* উল্লম্ব করে দাও */
+        width: 100%;                       /* পুরো প্রস্থ নেবে */
+        background: #1e3c72;              /* ব্যাকগ্রাউন্ড নেভবারের মতোই */
+        order: 3;                          /* লোগো ও হ্যামবার্গারের নিচে চলে আসবে */
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* যখন 'show' ক্লাস যোগ করা হবে, তখন দেখাবে */
+    .nav-menu.show {
+        display: flex;
+    }
+
+    /* প্রতিটি মেনু আইটেমকে ব্লক করে নাও */
+    .nav-menu li {
+        width: 100%;
+        text-align: center;
+    }
+
+    .nav-menu li a {
+        display: block;
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+        border-radius: 0;
+    }
+
+    /* লগআউট বাটনও পুরো চওড়া করে দিতে পারি, কিন্তু সেটা আগের মতো থাক */
+    .logout-btn {
+        order: 2;             /* হ্যামবার্গারের পাশে ডানদিকে থাকবে */
+        margin-left: auto;    /* আগের মতোই ডানে থাকবে */
+    }
+
+    /* nav-brand এর প্যাডিং কমাও */
+    .nav-brand {
+        padding: 10px 0;
+        margin-right: 10px;
+    }
+}

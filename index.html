@@ -133,6 +133,9 @@
             <div class="nav-brand">
 	        <img src="logo.png" alt="AVL System Logo" class="nav-logo">
 	    </div>
+            <button class="hamburger" id="hamburgerBtn">
+                <i class="fas fa-bars"></i>
+            </button>
             <ul class="nav-menu" id="navMenu">
                 <li><a data-view="dashboard" class="active">Dashboard</a></li>
                 <li><a data-view="orderForm">Order Form</a></li>
@@ -209,6 +212,24 @@
                 }
             }
         }
+    </script>
+    <script>
+        // হ্যামবার্গার মেনু টগল
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const navMenu = document.getElementById('navMenu');
+
+        hamburgerBtn.addEventListener('click', () => {
+            navMenu.classList.toggle('show');
+        });
+
+        // মেনুর ভিতরের যে কোনো লিংকে ক্লিক করলে মেনু বন্ধ করে দাও (মোবাইলে)
+        navMenu.querySelectorAll('a[data-view]').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    navMenu.classList.remove('show');
+                }
+            });
+        });
     </script>
     <script type="module" src="app.js"></script>
 </body>
