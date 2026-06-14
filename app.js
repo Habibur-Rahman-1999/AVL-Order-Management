@@ -52,7 +52,7 @@ function switchAuthView(view) {
 }
 
 // Google Apps Script URL (OTP sender)
-const appsScriptURL = "https://script.google.com/macros/s/AKfycbwGKhmUhDeuk_8T7SJZd0IigF1auDOxSHwek60udvjG-iZVNESpS1eonTwmTbQFiUhgsw/exec";
+const appsScriptURL = "https://script.google.com/macros/s/AKfycby4WFu5qoOuYFfiFFC1oDuHFQR2aVMZj4mBdBLQR_m6mxEOv31Gss5zfph1GcJuLeS65g/exec";
 
 // Button loading helper
 function toggleLoading(buttonId, isLoading, defaultHtml) {
