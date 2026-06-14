@@ -452,7 +452,7 @@ function loadManageUnits() {
             <div style="margin-top:10px;">
               ${salesLinesHtml}
             </div>
-            <div style="margin-top:12px; display:flex; gap:10px;">
+            <div class="add-line-row" style="margin-top:12px; display:flex; gap:10px;">
               <input type="text" class="input-add-line" placeholder="নতুন সেলস লাইন যোগ করুন" style="flex:1; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
               <button class="btn-add-line" data-unit-id="${unitId}" style="background:#38a169; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer;">Add Line</button>
             </div>

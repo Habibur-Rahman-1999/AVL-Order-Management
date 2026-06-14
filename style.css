@@ -477,3 +477,17 @@ body {
 .add-unit-form input {
     font-size: 14px;
 }
+
+/* মোবাইলে সেলস লাইন অ্যাড করার অংশ উল্লম্ব করে দাও */
+@media (max-width: 500px) {
+    .add-line-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    .add-line-row input {
+        width: 100% !important;
+    }
+    .add-line-row button {
+        width: 100% !important;
+    }
+}
