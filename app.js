@@ -405,7 +405,7 @@ function loadUserManagement() {
     if (!allUsersCache) return;
     const filtered = {};
     Object.entries(allUsersCache).forEach(([uid, user]) => {
-      if (user.enroll?.toLowerCase().includes(term) || user.email?.toLowerCase().includes(term)) {
+      if (String(user.enroll).toLowerCase().includes(term) || String(user.email).toLowerCase().includes(term)) {
         filtered[uid] = user;
       }
     });
@@ -516,7 +516,7 @@ function exportUsersToCSV(users) {
 
   let csvContent = '';
   rows.forEach(row => {
-    const escapedRow = row.map(cell => `"${cell.replace(/"/g, '""')}"`);
+    const escapedRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
     csvContent += escapedRow.join(',') + '\n';
   });
 
