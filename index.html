@@ -47,14 +47,14 @@
         </div>
         <form onsubmit="return false;">
             <div class="input-group">
-                <label>Enroll ID (আইডি নম্বর)</label>
+                <label>Enroll ID (শুধু সংখ্যা, ইউনিক)</label>
                 <div class="input-wrapper">
                     <i class="fas fa-id-card input-icon"></i>
                     <input type="text" id="regEnroll" placeholder="উদাঃ 12345" required>
                 </div>
             </div>
             <div class="input-group">
-                <label>পূর্ণ নাম (Full Name)</label>
+                <label>পূর্ণ নাম (শুধু ইংরেজি অক্ষর)</label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-tag input-icon"></i>
                     <input type="text" id="regName" placeholder="আপনার নাম লিখুন" required>
@@ -67,37 +67,46 @@
                     <input type="email" id="regEmail" placeholder="username@akijfood.com" required>
                 </div>
             </div>
+            <!-- ইউনিট ড্রপডাউন -->
             <div class="input-group">
-                <label>Sales Line (সেলস লাইন)</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-route input-icon"></i>
-                    <select id="regSalesLine" required>
-                        <option value="" disabled selected>সেলস লাইন সিলেক্ট করুন</option>
-                        <option value="Beverage">Beverage</option>
-                        <option value="Food">Food</option>
-                        <option value="Dairy">Dairy</option>
-                        <option value="Commodity">Commodity</option>
-                    </select>
-                </div>
-            </div>
-            <div class="input-group">
-                <label>Unit (ইউনিট)</label>
+                <label>ইউনিট</label>
                 <div class="input-wrapper">
                     <i class="fas fa-building input-icon"></i>
                     <select id="regUnit" required>
                         <option value="" disabled selected>ইউনিট সিলেক্ট করুন</option>
-                        <option value="AVL">Akij Venture Ltd (AVL)</option>
-                        <option value="AFBL">Akij Food & Beverage Ltd (AFBL)</option>
+                    </select>
+                </div>
+            </div>
+            <!-- সেলস লাইন ড্রপডাউন (ইউনিট সিলেক্টের পর পপুলেট হবে) -->
+            <div class="input-group">
+                <label>সেলস লাইন</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-route input-icon"></i>
+                    <select id="regSalesLine" required disabled>
+                        <option value="" disabled selected>প্রথমে ইউনিট সিলেক্ট করুন</option>
+                    </select>
+                </div>
+            </div>
+            <!-- রোল ড্রপডাউন -->
+            <div class="input-group">
+                <label>রোল</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-user-tag input-icon"></i>
+                    <select id="regRole" required>
+                        <option value="" disabled selected>রোল সিলেক্ট করুন</option>
+                        <option value="manager">Manager</option>
+                        <option value="sales">Sales</option>
                     </select>
                 </div>
             </div>
             <div class="input-group">
-                <label>পাসওয়ার্ড</label>
+                <label>পাসওয়ার্ড (স্ট্রং পাসওয়ার্ড)</label>
                 <div class="input-wrapper">
                     <i class="fas fa-key input-icon"></i>
-                    <input type="password" id="regPassword" placeholder="নূন্যতম ৬ অক্ষরের পাসওয়ার্ড" required>
+                    <input type="password" id="regPassword" placeholder="A-Z, a-z, 0-9, বিশেষ চিহ্ন" required>
                     <i class="fas fa-eye toggle-icon" onclick="togglePass('regPassword')"></i>
                 </div>
+                <div id="passwordStrength" style="font-size:12px; margin-top:5px;"></div>
             </div>
             <div class="action-buttons">
                 <button type="button" id="btnSendOTP" class="btn btn-secondary"><i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান</button>
@@ -131,8 +140,8 @@
     <div id="main-app" class="auth-view main-app-container" style="display: none;">
         <nav class="top-navbar">
             <div class="nav-brand">
-	        <img src="logo.png" alt="AVL System Logo" class="nav-logo">
-	    </div>
+                <img src="logo.png" alt="AVL System Logo" class="nav-logo">
+            </div>
             <button class="hamburger" id="hamburgerBtn">
                 <i class="fas fa-bars"></i>
             </button>
@@ -143,7 +152,7 @@
                 <li><a data-view="itemList">Item List</a></li>
                 <li><a data-view="resetPassword">Reset Password</a></li>
                 <li id="adminApprovalsMenu" style="display:none;"><a data-view="userApprovals">User Approvals</a></li>
-		<li id="adminManageUnitsMenu" style="display:none;"><a data-view="manageUnits">Manage Units</a>
+                <li id="adminManageUnitsMenu" style="display:none;"><a data-view="manageUnits">Manage Units</a></li>
             </ul>
             <button id="btnLogout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </nav>

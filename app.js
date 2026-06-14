@@ -32,7 +32,7 @@ let currentUser = {
   uid: null,
   email: null,
   name: null,
-  role: 'user', // 'admin' or 'user'
+  role: 'user', // 'admin', 'manager', or 'sales'
   status: null
 };
 
@@ -49,6 +49,63 @@ document.getElementById('backToRegister').addEventListener('click', () => switch
 function switchAuthView(view) {
   [loginView, registerView, otpView].forEach(v => v.classList.remove('active'));
   view.classList.add('active');
+
+  if (view === registerView) {
+    loadUnitDropdowns();  // ইউনিট ড্রপডাউন লোড করো
+  }
+}
+
+// ইউনিট ড্রপডাউন পপুলেট করার ফাংশন
+async function loadUnitDropdowns() {
+  const unitSelect = document.getElementById('regUnit');
+  const lineSelect = document.getElementById('regSalesLine');
+  const unitsRef = ref(database, 'units');
+
+  unitSelect.innerHTML = '<option value="" disabled selected>লোড হচ্ছে...</option>';
+
+  try {
+    const snapshot = await get(unitsRef);
+    const units = snapshot.val();
+
+    unitSelect.innerHTML = '<option value="" disabled selected>ইউনিট সিলেক্ট করুন</option>';
+    if (units) {
+      Object.entries(units).forEach(([unitId, unit]) => {
+        const option = document.createElement('option');
+        option.value = unitId;  // আমরা unitId রাখব, shortCode দেখাব
+        option.textContent = unit.shortCode;
+        unitSelect.appendChild(option);
+      });
+    } else {
+      unitSelect.innerHTML = '<option value="" disabled>কোনো ইউনিট নেই</option>';
+    }
+
+    // ইউনিট সিলেক্টের ইভেন্ট লিসেনার (সেলস লাইন পপুলেট)
+    unitSelect.addEventListener('change', async () => {
+      const selectedUnitId = unitSelect.value;
+      lineSelect.innerHTML = '<option value="" disabled selected>লোড হচ্ছে...</option>';
+      lineSelect.disabled = true;
+
+      if (!selectedUnitId) return;
+
+      const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+      const unitData = unitSnap.val();
+      if (unitData && unitData.salesLines && unitData.salesLines.length > 0) {
+        lineSelect.innerHTML = '<option value="" disabled selected>সেলস লাইন সিলেক্ট করুন</option>';
+        unitData.salesLines.forEach(line => {
+          const opt = document.createElement('option');
+          opt.value = line;
+          opt.textContent = line;
+          lineSelect.appendChild(opt);
+        });
+        lineSelect.disabled = false;
+      } else {
+        lineSelect.innerHTML = '<option value="" disabled>এই ইউনিটে কোনো সেলস লাইন নেই</option>';
+      }
+    });
+  } catch (error) {
+    console.error('ইউনিট লোড করতে ব্যর্থ:', error);
+    unitSelect.innerHTML = '<option value="" disabled>লোড ব্যর্থ</option>';
+  }
 }
 
 // Google Apps Script URL (OTP sender)
@@ -64,6 +121,30 @@ function toggleLoading(buttonId, isLoading, defaultHtml) {
     btn.disabled = false;
     btn.innerHTML = defaultHtml;
   }
+}
+
+// স্ট্রং পাসওয়ার্ড চেক
+function isPasswordStrong(password) {
+  // কমপক্ষে 8 অক্ষর, বড় হাতের, ছোট হাতের, সংখ্যা, বিশেষ চিহ্ন
+  const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+  return strongRegex.test(password);
+}
+
+// Enroll ID ডুপ্লিকেট চেক (users নোডে সব ইউজারের enroll ফিল্ডের সাথে মিলিয়ে)
+async function isEnrollDuplicate(enroll) {
+  const usersRef = ref(database, 'users');
+  const snapshot = await get(usersRef);
+  if (snapshot.exists()) {
+    const users = snapshot.val();
+    return Object.values(users).some(user => user.enroll === enroll);
+  }
+  return false;
+}
+
+// নাম ভ্যালিডেশন (শুধু ইংরেজি অক্ষর ও স্পেস)
+function isValidName(name) {
+  const nameRegex = /^[A-Za-z\s]+$/;
+  return nameRegex.test(name);
 }
 
 // ---------- LOGIN ----------
@@ -84,9 +165,6 @@ document.getElementById('btnLogin').addEventListener('click', () => {
       const userRef = ref(database, 'users/' + user.uid);
       const snap = await get(userRef);
       if (!snap.exists()) {
-        // If no record, maybe admin but not in users node? We'll check admins list.
-        // But we still need a record; we can create one if admin doesn't exist.
-        // For safety, let's sign out and show error.
         await signOut(auth);
         toggleLoading('btnLogin', false, defaultHtml);
         alert('আপনার অ্যাকাউন্ট ডাটাবেইজে পাওয়া যায়নি। প্রশাসকের সাথে যোগাযোগ করুন।');
@@ -102,7 +180,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         return;
       }
       
-      // Determine role: if email exists in admins node, assign 'admin', else role from userData (should be 'user')
+      // Determine role: if email exists in admins node, assign 'admin', else role from userData
       const adminsRef = ref(database, 'admins');
       const adminsSnap = await get(adminsRef);
       const admins = adminsSnap.val() || {};
@@ -112,7 +190,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         uid: user.uid,
         email: user.email,
         name: userData.name,
-        role: isAdmin ? 'admin' : 'user',
+        role: isAdmin ? 'admin' : (userData.role || 'sales'),
         status: userData.status
       };
       
@@ -127,25 +205,51 @@ document.getElementById('btnLogin').addEventListener('click', () => {
 });
 
 // ---------- REGISTRATION (SEND OTP) ----------
-document.getElementById('btnSendOTP').addEventListener('click', () => {
+document.getElementById('btnSendOTP').addEventListener('click', async () => {
   const enroll = document.getElementById('regEnroll').value.trim();
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
+  const unitSelect = document.getElementById('regUnit');
+  const unitId = unitSelect.value;
+  const unitShortCode = unitSelect.options[unitSelect.selectedIndex]?.text || '';
   const salesLine = document.getElementById('regSalesLine').value;
-  const unit = document.getElementById('regUnit').value;
+  const role = document.getElementById('regRole').value;
   const password = document.getElementById('regPassword').value;
   const defaultHtml = `<i class="fas fa-paper-plane"></i> ওটিপি কোড পাঠান`;
-  
-  if (!enroll || !name || !email || !salesLine || !unit || !password) {
+
+  // ভ্যালিডেশন
+  if (!enroll || !name || !email || !unitId || !salesLine || !role || !password) {
     alert('সকল ঘর পূরণ করুন।');
     return;
   }
-  if (password.length < 6) {
-    alert('পাসওয়ার্ড নূন্যতম ৬ অক্ষরের হতে হবে।');
+  // Enroll ID শুধু সংখ্যা
+  if (!/^\d+$/.test(enroll)) {
+    alert('Enroll ID শুধুমাত্র সংখ্যা হতে হবে।');
     return;
   }
-  
-  tempRegistrationData = { enroll, name, email, salesLine, unit, password };
+  // নাম শুধু ইংরেজি অক্ষর
+  if (!isValidName(name)) {
+    alert('নাম শুধুমাত্র ইংরেজি অক্ষর ও স্পেস হতে পারে।');
+    return;
+  }
+  // ইমেইল ফরম্যাট
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    alert('সঠিক ইমেইল ফরম্যাট প্রদান করুন।');
+    return;
+  }
+  // পাসওয়ার্ড স্ট্রং
+  if (!isPasswordStrong(password)) {
+    alert('পাসওয়ার্ডে অন্তত ৮ অক্ষর, একটি বড় হাতের, একটি ছোট হাতের, একটি সংখ্যা ও একটি বিশেষ চিহ্ন (যেমন !@#$%) থাকতে হবে।');
+    return;
+  }
+  // Enroll ID ডুপ্লিকেট চেক
+  const duplicate = await isEnrollDuplicate(enroll);
+  if (duplicate) {
+    alert('এই Enroll ID ইতিমধ্যে নিবন্ধিত।');
+    return;
+  }
+
+  tempRegistrationData = { enroll, name, email, unitId, unitShortCode, salesLine, role, password };
   generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
   
   toggleLoading('btnSendOTP', true, defaultHtml);
@@ -194,10 +298,11 @@ document.getElementById('btnVerifyOTP').addEventListener('click', () => {
         enroll: tempRegistrationData.enroll,
         name: tempRegistrationData.name,
         email: tempRegistrationData.email,
+        unitId: tempRegistrationData.unitId,
+        unitShortCode: tempRegistrationData.unitShortCode,
         salesLine: tempRegistrationData.salesLine,
-        unit: tempRegistrationData.unit,
+        role: tempRegistrationData.role,
         status: 'pending',
-        role: 'user',
         createdAt: new Date().toISOString()
       });
       
@@ -225,19 +330,16 @@ function showMainApp() {
   // Set logged-in user name
   document.getElementById('loggedUserName').textContent = currentUser.name;
   
-  // Show admin menu if admin
+  // Show/hide menus based on role
   if (currentUser.role === 'admin') {
     document.getElementById('adminApprovalsMenu').style.display = 'block';
-  } else {
+    document.getElementById('adminManageUnitsMenu').style.display = 'block';
+  } else if (currentUser.role === 'manager') {
     document.getElementById('adminApprovalsMenu').style.display = 'none';
-  }
-
-  if (currentUser.role === 'admin') {
-      document.getElementById('adminApprovalsMenu').style.display = 'block';
-      document.getElementById('adminManageUnitsMenu').style.display = 'block';  // ✅ নতুন লাইন
-  } else {
-      document.getElementById('adminApprovalsMenu').style.display = 'none';
-      document.getElementById('adminManageUnitsMenu').style.display = 'none';   // ✅ নতুন লাইন
+    document.getElementById('adminManageUnitsMenu').style.display = 'block';
+  } else { // sales
+    document.getElementById('adminApprovalsMenu').style.display = 'none';
+    document.getElementById('adminManageUnitsMenu').style.display = 'none';
   }
   
   // Activate default dashboard view
@@ -331,7 +433,7 @@ function loadPendingUsers() {
     const table = document.createElement('table');
     table.className = 'approval-table';
     table.innerHTML = `
-      <thead><tr><th>নাম</th><th>ইমেইল</th><th>Enroll ID</th><th>Sales Line</th><th>Unit</th><th>Action</th></tr></thead>
+      <thead><tr><th>নাম</th><th>ইমেইল</th><th>Enroll ID</th><th>Sales Line</th><th>Unit</th><th>Role</th><th>Action</th></tr></thead>
       <tbody></tbody>
     `;
     const tbody = table.querySelector('tbody');
@@ -344,8 +446,9 @@ function loadPendingUsers() {
           <td>${user.name}</td>
           <td>${user.email}</td>
           <td>${user.enroll}</td>
-          <td>${user.salesLine}</td>
-          <td>${user.unit}</td>
+          <td>${user.salesLine || ''}</td>
+          <td>${user.unitShortCode || user.unit || ''}</td>
+          <td>${user.role || 'sales'}</td>
           <td>
             <button class="btn-approve" data-uid="${uid}">Approve</button>
             <button class="btn-reject" data-uid="${uid}">Reject</button>
@@ -354,19 +457,17 @@ function loadPendingUsers() {
         tbody.appendChild(row);
       }
     });
-    // এখন টেবিলকে একটি responsive ডিভের ভিতরে পুরে দিচ্ছি
-    const tableWrapper = document.createElement('div');
-    tableWrapper.className = 'table-responsive';
-    tableWrapper.appendChild(table);
-
-    // কন্টেইনারে সেই ডিভটি যোগ করছি
-    container.appendChild(tableWrapper);
     
     if (!pendingFound) {
       container.innerHTML = '<p class="empty-message">কোনো পেন্ডিং ইউজার নেই।</p>';
       return;
     }
     
+    // Wrap table in responsive container for mobile scrolling
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-responsive';
+    tableWrapper.appendChild(table);
+    container.appendChild(tableWrapper);
     
     // Attach event listeners for approve/reject
     container.querySelectorAll('.btn-approve').forEach(btn => {
