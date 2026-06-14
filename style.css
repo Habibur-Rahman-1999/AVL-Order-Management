@@ -1,4 +1,6 @@
-/* Reset & Typography Base */
+/* ========== MERGED CSS: Base from first block + essential additions from second block ========== */
+
+/* Reset & Typography Base (combined from both sources, using full font stack) */
 * {
     margin: 0;
     padding: 0;
@@ -15,7 +17,7 @@ body {
     padding: 20px;
 }
 
-/* Glassmorphism Wrapper */
+/* Glassmorphism Wrapper Dynamic Layout */
 .login-container {
     background: rgba(255, 255, 255, 0.98);
     width: 100%;
@@ -27,6 +29,89 @@ body {
     overflow: hidden;
 }
 
+/* ---------- MAIN APPLICATION WRAPPER ---------- */
+.main-app-container {
+    width: 100%;
+    max-width: 1000px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 90vh;
+}
+
+.top-navbar {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0 20px;
+    color: white;
+}
+
+.nav-brand {
+    font-size: 20px;
+    font-weight: 700;
+    padding: 15px 20px 15px 0;
+    border-right: 1px solid rgba(255,255,255,0.3);
+    margin-right: 15px;
+}
+
+.nav-menu {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    gap: 5px;
+    flex: 1;
+}
+
+.nav-menu li a {
+    display: block;
+    padding: 14px 15px;
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    border-radius: 8px 8px 0 0;
+    transition: 0.2s;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.nav-menu li a:hover,
+.nav-menu li a.active {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+}
+
+.logout-btn {
+    margin-left: auto;
+    padding: 8px 16px;
+    background: #e53e3e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.logout-btn:hover { background: #c53030; }
+
+.main-content {
+    flex: 1;
+    padding: 30px;
+    background: #f8fafc;
+}
+
+.sub-view {
+    display: none;
+}
+
+.sub-view.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+/* ---------- AUTH VIEWS (Login, Register, OTP) ---------- */
 .auth-view {
     display: none;
 }
@@ -41,6 +126,7 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Top Header Component */
 .login-header {
     text-align: center;
     margin-bottom: 25px;
@@ -73,6 +159,7 @@ body {
     margin-top: 4px;
 }
 
+/* Custom Structure Form Fields */
 .input-group {
     margin-bottom: 16px;
 }
@@ -98,6 +185,7 @@ body {
     font-size: 14px;
 }
 
+/* General input/select styling */
 .input-wrapper input, 
 .input-wrapper select {
     width: 100%;
@@ -112,6 +200,7 @@ body {
     appearance: none;
 }
 
+/* Password fields need extra right padding for the toggle icon */
 .input-wrapper input[type="password"] {
     padding-right: 40px;
 }
@@ -131,16 +220,18 @@ body {
     box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.12);
 }
 
+/* Toggle password visibility icon (added from second CSS) */
 .toggle-icon {
     position: absolute;
     right: 12px;
     cursor: pointer;
     color: #64748b;
     font-size: 15px;
-    pointer-events: auto;
+    pointer-events: auto; /* ensure clickable */
     z-index: 2;
 }
 
+/* Flexible Premium Action Buttons */
 .action-buttons {
     display: flex;
     flex-direction: column;
@@ -202,12 +293,65 @@ body {
     filter: brightness(0.95);
 }
 
+/* Loading & Disabled Button State Architecture */
 .btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
     transform: none !important;
     filter: none !important;
     pointer-events: none;
+}
+
+/* ---------- TABLE STYLES FOR APPROVALS ---------- */
+.approval-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.approval-table th, .approval-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.approval-table th {
+    background: #1e3c72;
+    color: white;
+    font-weight: 600;
+}
+
+.approval-table tr:last-child td {
+    border-bottom: none;
+}
+
+.approval-table button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 5px;
+}
+
+.btn-approve {
+    background: #38a169;
+    color: white;
+}
+
+.btn-reject {
+    background: #e53e3e;
+    color: white;
+}
+
+.empty-message {
+    text-align: center;
+    color: #64748b;
+    padding: 30px;
+    font-style: italic;
 }
 
 @media (max-width: 480px) {
