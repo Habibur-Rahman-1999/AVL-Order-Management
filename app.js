@@ -1755,26 +1755,28 @@ document.getElementById('btnSaveEditCustomer').addEventListener('click', async (
   } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
 });
 
-// ========== ORDER FORM ==========
-document.getElementById('btnLoadCustomer').addEventListener('click', async () => {
+// কাস্টমার কোড অটো-লোড
+document.getElementById('orderCustomerCode').addEventListener('input', () => {
   const code = document.getElementById('orderCustomerCode').value.trim();
-  if (!code) return;
-  let customer = null;
-  if (allCustomersCache) {
-    customer = Object.values(allCustomersCache).find(c => c.custCode === code);
-  }
-  if (!customer) {
-    alert('কাস্টমার পাওয়া যায়নি।');
+  if (!code || !allCustomersCache) {
+    document.getElementById('customerInfo').style.display = 'none';
     return;
   }
-  // Role-based access for sales
+  const customer = Object.values(allCustomersCache).find(c => c.custCode === code);
+  if (!customer) {
+    document.getElementById('customerInfo').style.display = 'none';
+    return;  // পুরো কোড মেলেনি – কিছু দেখাবে না (বা মেসেজ দিতে পারো)
+  }
+  // Role-based check
   if (currentUser.role === 'sales') {
     const isAssigned = customer.salespersons && customer.salespersons.includes(currentUser.uid);
     if (!isAssigned) {
       alert('আপনি এই কাস্টমারকে অ্যাক্সেস করতে পারবেন না।');
+      document.getElementById('customerInfo').style.display = 'none';
       return;
     }
   }
+  // তথ্য দেখাও
   document.getElementById('custName').textContent = customer.custName;
   document.getElementById('custWarehouse').textContent = customer.warehouse;
   document.getElementById('custRegion').textContent = customer.region;
@@ -1782,24 +1784,85 @@ document.getElementById('btnLoadCustomer').addEventListener('click', async () =>
   document.getElementById('custUnit').textContent = customer.unitShortCode || '';
   document.getElementById('custLine').textContent = customer.line;
   document.getElementById('customerInfo').style.display = 'block';
-  window.selectedCustomer = customer; // store for order submission
+  window.selectedCustomer = customer;
 });
 
-document.getElementById('btnSearchItem').addEventListener('click', () => {
-  const searchTerm = document.getElementById('orderItemSearch').value.trim().toLowerCase();
-  if (!searchTerm || !allItemsCache) return;
-  const item = Object.values(allItemsCache).find(it => 
-    String(it.itemCode).toLowerCase() === searchTerm ||
-    (it.description && it.description.toLowerCase().includes(searchTerm))
-  );
-  if (!item) {
-    alert('আইটেম পাওয়া যায়নি।');
+// আইটেম সার্চ অটোকমপ্লিট
+const itemSearchInput = document.getElementById('orderItemSearch');
+const itemDropdown = document.createElement('div');
+itemDropdown.id = 'itemSearchDropdown';
+itemDropdown.style.cssText = 'position:absolute; background:#fff; border:1px solid #e2e8f0; border-radius:4px; max-height:200px; overflow-y:auto; z-index:50; display:none;';
+document.getElementById('orderItemSearch').parentElement.style.position = 'relative';
+document.getElementById('orderItemSearch').parentElement.appendChild(itemDropdown);
+
+itemSearchInput.addEventListener('input', () => {
+  const term = itemSearchInput.value.trim().toLowerCase();
+  if (!term || !allItemsCache) {
+    itemDropdown.style.display = 'none';
     return;
   }
-  document.getElementById('itemDesc').textContent = item.description;
-  document.getElementById('itemPrice').textContent = item.affectedDistributorPrice || item.distributorPrice;
-  document.getElementById('itemDetails').style.display = 'block';
-  window.selectedItem = item;
+  const matches = Object.entries(allItemsCache).filter(([id, item]) =>
+    String(item.itemCode).toLowerCase().includes(term) ||
+    (item.description && item.description.toLowerCase().includes(term))
+  );
+  if (matches.length === 0) {
+    itemDropdown.innerHTML = '<div style="padding:8px;">কোনো আইটেম পাওয়া যায়নি</div>';
+    itemDropdown.style.display = 'block';
+    return;
+  }
+  itemDropdown.innerHTML = matches.map(([id, item]) =>
+    `<div data-id="${id}" class="item-search-item" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;">
+      ${item.itemCode} - ${item.description}
+    </div>`
+  ).join('');
+  itemDropdown.style.display = 'block';
+
+  // ক্লিক ইভেন্ট
+  document.querySelectorAll('.item-search-item').forEach(elem => {
+    elem.addEventListener('click', () => {
+      const id = elem.getAttribute('data-id');
+      const selectedItem = allItemsCache[id];
+      if (selectedItem) {
+        // বিস্তারিত দেখাও
+        document.getElementById('itemDesc').textContent = selectedItem.description;
+        const price = selectedItem.affectedDistributorPrice || selectedItem.distributorPrice;
+        document.getElementById('itemPrice').textContent = price;
+        // ট্রেড অফার তথ্য
+        let tradeText = '';
+        if (selectedItem.tradeCategory === 'free') {
+          const fd = selectedItem.freeDetails || {};
+          tradeText = `ফ্রি: ${fd.mainQty || 0} কিনলে ${fd.freeQty || 0} ফ্রি (আইটেম: ${fd.freeItemCode || ''})`;
+        } else if (selectedItem.tradeCategory === 'discount') {
+          const dd = selectedItem.discountDetails || {};
+          tradeText = `ডিসকাউন্ট: ${dd.type === 'percentage' ? dd.value + '%' : dd.value + ' টাকা'} ${dd.type === 'percentage' ? 'ছাড়' : 'কম'}`;
+        } else {
+          tradeText = 'কোনো অফার নেই';
+        }
+        document.getElementById('tradeOfferInfo').textContent = tradeText;
+        window.selectedItem = selectedItem;
+        document.getElementById('itemQuantity').value = 1;
+        updateItemTotal(); // মোট মূল্য আপডেট
+        document.getElementById('itemDetails').style.display = 'block';
+        itemSearchInput.value = selectedItem.itemCode; // সিলেক্টেড আইটেম কোড দেখাও
+        itemDropdown.style.display = 'none';
+      }
+    });
+  });
+});
+
+// আইটেমের মোট মূল্য আপডেট
+function updateItemTotal() {
+  const qty = parseInt(document.getElementById('itemQuantity').value) || 1;
+  const price = parseFloat(document.getElementById('itemPrice').textContent) || 0;
+  document.getElementById('itemTotalValue').textContent = (qty * price).toFixed(2);
+}
+document.getElementById('itemQuantity').addEventListener('input', updateItemTotal);
+
+// ড্রপডাউন বাইরে ক্লিক করলে হাইড
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#orderItemSearch') && !e.target.closest('#itemSearchDropdown')) {
+    itemDropdown.style.display = 'none';
+  }
 });
 
 function renderDraftTable() {
