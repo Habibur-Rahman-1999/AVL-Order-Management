@@ -6,7 +6,7 @@ import {
   updatePassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, get, update, onValue, off, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, update, onValue, off, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBRNwi-pA8OSq7__Rn4Hg5X_280W9AexH0",
@@ -682,6 +682,8 @@ function attachUnitEventListeners() {
 }
 
 // ========== ITEM MANAGEMENT ==========
+let itemFormListenersAttached = false;
+
 async function loadItemFormUnits() {
   const unitSelect = document.getElementById('itemUnit');
   const lineSelect = document.getElementById('itemLine');
@@ -784,10 +786,13 @@ document.getElementById('btnShowCreateItem').addEventListener('click', () => {
   const form = document.getElementById('createItemFormContainer');
   form.style.display = 'block';
   loadItemFormUnits();
-  document.getElementById('newTradeCategory').addEventListener('change', toggleTradeFields);
-  document.getElementById('discountType').addEventListener('change', toggleDiscountValueField);
-  document.getElementById('newDistributorPrice').addEventListener('input', calculateAffectedPrice);
-  document.getElementById('discountValue').addEventListener('input', calculateAffectedPrice);  // ✅ নতুন লাইন
+  if (!itemFormListenersAttached) {
+    document.getElementById('newTradeCategory').addEventListener('change', toggleTradeFields);
+    document.getElementById('discountType').addEventListener('change', toggleDiscountValueField);
+    document.getElementById('newDistributorPrice').addEventListener('input', calculateAffectedPrice);
+    document.getElementById('discountValue').addEventListener('input', calculateAffectedPrice);
+    itemFormListenersAttached = true;
+  }
 });
 
 document.getElementById('btnCancelItem').addEventListener('click', () => {
@@ -944,7 +949,7 @@ function attachItemActions(items) {
       if (!confirm('আইটেমটি মুছে ফেলতে চান?')) return;
       const id = e.target.getAttribute('data-id');
       try {
-        await set(ref(database, 'items/' + id), null);
+        await remove(ref(database, 'items/' + id));
         alert('আইটেম ডিলিট করা হয়েছে।');
       } catch (err) { alert('ডিলিট ব্যর্থ: ' + err.message); }
     });
@@ -989,7 +994,7 @@ async function openEditItemModal(id, item) {
   editingItemId = id;
   const content = document.getElementById('editItemFormContent');
   
-  // Build form similar to create form but with edit prefixes
+  // Build form
   content.innerHTML = `
     <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
       <div class="input-group" style="flex:1; min-width:200px;">
@@ -1084,8 +1089,13 @@ async function openEditItemModal(id, item) {
   const unitSelect = document.getElementById('editItemUnit');
   const lineSelect = document.getElementById('editItemLine');
   const unitsRef = ref(database, 'units');
-  const unitsSnap = await get(unitsRef);
-  const units = unitsSnap.val() || {};
+  let units = {};
+  try {
+    const unitsSnap = await get(unitsRef);
+    units = unitsSnap.val() || {};
+  } catch (err) {
+    console.error('ইউনিট লোড করতে ব্যর্থ:', err);
+  }
   unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
   Object.entries(units).forEach(([unitId, unit]) => {
     const opt = document.createElement('option');
@@ -1116,38 +1126,47 @@ async function openEditItemModal(id, item) {
     }
   };
   unitSelect.addEventListener('change', updateEditLines);
-  if (unitSelect.value) {
-    try {
-      await updateEditLines();
-    } catch (e) {
-      console.error('updateEditLines error:', e);
-    }
+  try {
+    if (unitSelect.value) await updateEditLines();
+  } catch (e) {
+    console.error('updateEditLines error:', e);
   }
 
-  // Recalculate affected price when fields change
+  // Recalculate affected price safely
   const recalcEdit = () => {
-    const dist = parseFloat(document.getElementById('editDistributorPrice').value) || 0;
-    const cat = document.getElementById('editTradeCategory').value;
+    const distEl = document.getElementById('editDistributorPrice');
+    const catEl = document.getElementById('editTradeCategory');
+    const affEl = document.getElementById('editAffectedPrice');
+    if (!distEl || !catEl || !affEl) return;
+
+    const dist = parseFloat(distEl.value) || 0;
+    const cat = catEl.value;
     let aff = dist;
-    if (cat === 'free') aff = dist;
-    else if (cat === 'discount') {
-      const type = document.getElementById('editDiscountType').value;
-      const val = parseFloat(document.getElementById('editDiscountValue').value) || 0;
-      aff = type === 'percentage' ? dist - (dist * val / 100) : dist - val;
-      if (aff < 0) aff = 0;
+
+    if (cat === 'discount') {
+      const discTypeEl = document.getElementById('editDiscountType');
+      const discValEl = document.getElementById('editDiscountValue');
+      if (discTypeEl && discValEl) {
+        const type = discTypeEl.value;
+        const val = parseFloat(discValEl.value) || 0;
+        aff = type === 'percentage' ? dist - (dist * val / 100) : dist - val;
+        if (aff < 0) aff = 0;
+      }
     }
-    document.getElementById('editAffectedPrice').value = aff.toFixed(2);
+    affEl.value = aff.toFixed(2);
   };
 
-  // এই অংশটা openEditItemModal-এর ভিতর যেখানে recalcEdit-এর পরে আছে, সেখানে বসাও
+  // Attach listeners only to existing elements
   const edDistPrice = document.getElementById('editDistributorPrice');
   if (edDistPrice) edDistPrice.addEventListener('input', recalcEdit);
 
   const edTradeCat = document.getElementById('editTradeCategory');
   if (edTradeCat) {
-    edTradeCat.addEventListener('change', function() {
-      document.getElementById('editFreeFields').style.display = this.value === 'free' ? 'block' : 'none';
-      document.getElementById('editDiscountFields').style.display = this.value === 'discount' ? 'block' : 'none';
+    edTradeCat.addEventListener('change', () => {
+      const freeFields = document.getElementById('editFreeFields');
+      const discFields = document.getElementById('editDiscountFields');
+      if (freeFields) freeFields.style.display = edTradeCat.value === 'free' ? 'block' : 'none';
+      if (discFields) discFields.style.display = edTradeCat.value === 'discount' ? 'block' : 'none';
       recalcEdit();
     });
   }
@@ -1155,10 +1174,8 @@ async function openEditItemModal(id, item) {
   const edDiscType = document.getElementById('editDiscountType');
   if (edDiscType) edDiscType.addEventListener('change', recalcEdit);
 
-  const edDiscValue = document.getElementById('editDiscountValue');
-  if (edDiscValue) edDiscValue.addEventListener('input', recalcEdit);
-
-  // ফ্রি ফিল্ডের জন্যও চাইলে করতে পারো, কিন্তু দরকার নেই (তারা শুধু প্রাইসকে প্রভাবিত করে না)
+  const edDiscVal = document.getElementById('editDiscountValue');
+  if (edDiscVal) edDiscVal.addEventListener('input', recalcEdit);
 
   editItemModal.style.display = 'flex';
 }
@@ -1166,23 +1183,23 @@ async function openEditItemModal(id, item) {
 document.getElementById('btnSaveEditItem').addEventListener('click', async () => {
   if (!editingItemId) return;
   const updatedItem = {
-    itemCode: document.getElementById('editItemCode').value.trim(),
-    description: document.getElementById('editItemDescription').value.trim(),
-    uom: document.getElementById('editItemUOM').value.trim(),
-    distributorPrice: parseFloat(document.getElementById('editDistributorPrice').value),
-    tradeCategory: document.getElementById('editTradeCategory').value,
-    unitId: document.getElementById('editItemUnit').value,
-    unitShortCode: document.getElementById('editItemUnit').selectedOptions[0]?.text || '',
-    line: document.getElementById('editItemLine').value,
-    affectedDistributorPrice: parseFloat(document.getElementById('editAffectedPrice').value),
-    freeDetails: document.getElementById('editTradeCategory').value === 'free' ? {
-      mainQty: parseInt(document.getElementById('editFreeMainQty').value) || 0,
-      freeQty: parseInt(document.getElementById('editFreeFreeQty').value) || 0,
-      freeItemCode: document.getElementById('editFreeItemCode').value.trim()
+    itemCode: document.getElementById('editItemCode')?.value?.trim() || '',
+    description: document.getElementById('editItemDescription')?.value?.trim() || '',
+    uom: document.getElementById('editItemUOM')?.value?.trim() || '',
+    distributorPrice: parseFloat(document.getElementById('editDistributorPrice')?.value) || 0,
+    tradeCategory: document.getElementById('editTradeCategory')?.value || '',
+    unitId: document.getElementById('editItemUnit')?.value || '',
+    unitShortCode: document.getElementById('editItemUnit')?.selectedOptions?.[0]?.text || '',
+    line: document.getElementById('editItemLine')?.value || '',
+    affectedDistributorPrice: parseFloat(document.getElementById('editAffectedPrice')?.value) || 0,
+    freeDetails: document.getElementById('editTradeCategory')?.value === 'free' ? {
+      mainQty: parseInt(document.getElementById('editFreeMainQty')?.value) || 0,
+      freeQty: parseInt(document.getElementById('editFreeFreeQty')?.value) || 0,
+      freeItemCode: document.getElementById('editFreeItemCode')?.value?.trim() || ''
     } : {},
-    discountDetails: document.getElementById('editTradeCategory').value === 'discount' ? {
-      type: document.getElementById('editDiscountType').value,
-      value: parseFloat(document.getElementById('editDiscountValue').value) || 0
+    discountDetails: document.getElementById('editTradeCategory')?.value === 'discount' ? {
+      type: document.getElementById('editDiscountType')?.value || '',
+      value: parseFloat(document.getElementById('editDiscountValue')?.value) || 0
     } : {}
   };
 
