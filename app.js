@@ -1315,42 +1315,68 @@ async function loadCustomerFormUnits() {
 function handleSalespersonSearch() {
   const searchInput = document.getElementById('salespersonSearch');
   const resultsContainer = document.getElementById('salespersonSearchResults');
+
+  // ✅ আলাদা লাইনে event listener
   searchInput.addEventListener('input', () => {
     const term = searchInput.value.trim().toLowerCase();
+    // বাইরের resultsContainer-ই ব্যবহার করব, ভিতরে নতুন করে ডিক্লেয়ার করব না
+    // কারণ উপরের resultsContainer ইচ্ছামতো ব্যবহার করা যায়
+
+    // ইউনিট ও লাইন সিলেক্টেড আছে কিনা
+    const unitSelect = document.getElementById('newCustUnit');
+    const lineSelect = document.getElementById('newCustLine');
+    const selectedUnitId = unitSelect.value;
+    const selectedLine = lineSelect.value;
+
+    // যদি ইউনিট বা লাইন সিলেক্ট না থাকে, সার্চ বন্ধ রাখো
+    if (!selectedUnitId || !selectedLine) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
     if (!term || !allUsersCache) {
-      resultsContainer.style.display = 'none';
-      return;
+        resultsContainer.style.display = 'none';
+        return;
     }
+
     const filtered = Object.entries(allUsersCache).filter(([uid, user]) => {
-      return (user.enroll && String(user.enroll).toLowerCase().includes(term)) ||
-             (user.name && user.name.toLowerCase().includes(term)) ||
-             (user.email && user.email.toLowerCase().includes(term));
+        const matchUnit = user.unitId === selectedUnitId;
+        const matchLine = user.salesLine === selectedLine;
+        const matchRole = user.role === 'sales';
+        const matchSearch = (user.enroll && String(user.enroll).toLowerCase().includes(term)) ||
+                            (user.name && user.name.toLowerCase().includes(term)) ||
+                            (user.email && user.email.toLowerCase().includes(term));
+        return matchUnit && matchLine && matchRole && matchSearch;
     });
+
     if (filtered.length === 0) {
-      resultsContainer.innerHTML = '<div style="padding:8px;">কোনো ফলাফল নেই</div>';
-      resultsContainer.style.display = 'block';
-      return;
+        resultsContainer.innerHTML = '<div style="padding:8px;">কোনো ফলাফল নেই</div>';
+        resultsContainer.style.display = 'block';
+        return;
     }
+
     resultsContainer.innerHTML = filtered.map(([uid, user]) => {
-      return `<div data-uid="${uid}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;" class="sp-result-item">
-        ${user.name} (${user.enroll}) - ${user.email}
-      </div>`;
+        return `<div data-uid="${uid}" class="sp-result-item" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;">
+            ${user.name} (${user.enroll}) - ${user.email}
+        </div>`;
     }).join('');
     resultsContainer.style.display = 'block';
-    // Add click listeners to each result
+
+    // ক্লিক ইভেন্ট যোগ করা
     document.querySelectorAll('.sp-result-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const uid = item.getAttribute('data-uid');
-        const user = allUsersCache[uid];
-        if (user && !selectedSalespersons.some(sp => sp.uid === uid)) {
-          selectedSalespersons.push({ uid, name: user.name, enroll: user.enroll });
-          renderSelectedSalespersons();
-          searchInput.value = '';
-          resultsContainer.style.display = 'none';
-        }
-      });
+        item.addEventListener('click', () => {
+            const uid = item.getAttribute('data-uid');
+            const user = allUsersCache[uid];
+            if (user && !selectedSalespersons.some(sp => sp.uid === uid)) {
+                selectedSalespersons.push({ uid, name: user.name, enroll: user.enroll });
+                renderSelectedSalespersons();
+                searchInput.value = '';
+                resultsContainer.style.display = 'none';
+            }
+        });
     });
   });
+
   // Hide results when clicking outside
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#salespersonSearch') && !e.target.closest('#salespersonSearchResults')) {
