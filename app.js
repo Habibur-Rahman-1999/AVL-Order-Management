@@ -317,6 +317,11 @@ function switchSubView(viewId) {
   else if (viewId === 'itemList') {
     loadItemFormUnits();
     loadItems();
+    // ✅ সেলস হলে তৈরি বাটন লুকাও
+    const createBtn = document.getElementById('btnShowCreateItem');
+    if (createBtn) {
+      createBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
+    }
   }
 }
 
@@ -910,6 +915,17 @@ function renderItemsTable(items) {
 
   Object.entries(items).forEach(([id, item]) => {
     const row = document.createElement('tr');
+    // অ্যাকশন বাটন নির্ধারণ (সেলস ছাড়া সবাই পাবে)
+    let actionButtons = '';
+    if (currentUser.role !== 'sales') {
+      actionButtons = `
+        <button class="btn-edit-item" data-id="${id}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:4px;">Edit</button>
+        <button class="btn-delete-item" data-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>
+      `;
+    } else {
+      actionButtons = '—';
+    }
+
     row.innerHTML = `
       <td>${item.itemCode}</td>
       <td>${item.description}</td>
@@ -919,10 +935,7 @@ function renderItemsTable(items) {
       <td>${item.affectedDistributorPrice}</td>
       <td>${item.unitShortCode || ''}</td>
       <td>${item.line}</td>
-      <td>
-        <button class="btn-edit-item" data-id="${id}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:4px;">Edit</button>
-        <button class="btn-delete-item" data-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>
-      </td>
+      <td>${actionButtons}</td>
     `;
     tbody.appendChild(row);
   });
