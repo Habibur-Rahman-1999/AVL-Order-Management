@@ -1099,20 +1099,30 @@ async function openEditItemModal(id, item) {
     const selectedUnitId = unitSelect.value;
     lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
     if (!selectedUnitId) return;
-    const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
-    const unitData = unitSnap.val();
-    if (unitData && unitData.salesLines) {
-      unitData.salesLines.forEach(line => {
-        const opt = document.createElement('option');
-        opt.value = line;
-        opt.textContent = line;
-        if (line === item.line) opt.selected = true;
-        lineSelect.appendChild(opt);
-      });
+    try {
+      const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+      const unitData = unitSnap.val();
+      if (unitData && Array.isArray(unitData.salesLines)) {
+        unitData.salesLines.forEach(line => {
+          const opt = document.createElement('option');
+          opt.value = line;
+          opt.textContent = line;
+          if (line === item.line) opt.selected = true;
+          lineSelect.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      console.error('সেলস লাইন লোড করতে ব্যর্থ:', err);
     }
   };
   unitSelect.addEventListener('change', updateEditLines);
-  if (unitSelect.value) await updateEditLines();
+  if (unitSelect.value) {
+    try {
+      await updateEditLines();
+    } catch (e) {
+      console.error('updateEditLines error:', e);
+    }
+  }
 
   // Recalculate affected price when fields change
   const recalcEdit = () => {
