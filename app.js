@@ -162,6 +162,7 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         name: userData.name,
         role: isAdmin ? 'admin' : (userData.role || 'sales'),
         status: userData.status
+        salesLine: userData.salesLine || '' // ✅ নতুন লাইন
       };
       toggleLoading('btnLogin', false, defaultHtml);
       showMainApp();
@@ -943,6 +944,23 @@ function renderItemsTable(items) {
   if (!items || Object.keys(items).length === 0) {
     container.innerHTML = '<p class="empty-message">কোনো আইটেম পাওয়া যায়নি।</p>';
     return;
+  }
+
+  // ✅ সেলস ইউজার হলে শুধু নিজের লাইনের আইটেম ফিল্টার করো
+  if (currentUser.role === 'sales' && currentUser.salesLine) {
+    const filteredItems = {};
+    Object.entries(items).forEach(([id, item]) => {
+      if (item.line === currentUser.salesLine) {
+        filteredItems[id] = item;
+      }
+    });
+    items = filteredItems;
+    
+    // যদি ফিল্টার করার পর কোনো আইটেম না থাকে
+    if (Object.keys(items).length === 0) {
+      container.innerHTML = '<p class="empty-message">আপনার লাইনে কোনো আইটেম নেই।</p>';
+      return;
+    }
   }
 
   const table = document.createElement('table');
