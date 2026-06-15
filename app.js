@@ -787,6 +787,7 @@ document.getElementById('btnShowCreateItem').addEventListener('click', () => {
   document.getElementById('newTradeCategory').addEventListener('change', toggleTradeFields);
   document.getElementById('discountType').addEventListener('change', toggleDiscountValueField);
   document.getElementById('newDistributorPrice').addEventListener('input', calculateAffectedPrice);
+  document.getElementById('discountValue').addEventListener('input', calculateAffectedPrice);  // ✅ নতুন লাইন
 });
 
 document.getElementById('btnCancelItem').addEventListener('click', () => {
