@@ -1129,14 +1129,26 @@ async function openEditItemModal(id, item) {
     document.getElementById('editAffectedPrice').value = aff.toFixed(2);
   };
 
-  document.getElementById('editDistributorPrice').addEventListener('input', recalcEdit);
-  document.getElementById('editTradeCategory').addEventListener('change', function() {
-    document.getElementById('editFreeFields').style.display = this.value === 'free' ? 'block' : 'none';
-    document.getElementById('editDiscountFields').style.display = this.value === 'discount' ? 'block' : 'none';
-    recalcEdit();
-  });
-  document.getElementById('editDiscountType').addEventListener('change', recalcEdit);
-  document.getElementById('editDiscountValue').addEventListener('input', recalcEdit);
+  // এই অংশটা openEditItemModal-এর ভিতর যেখানে recalcEdit-এর পরে আছে, সেখানে বসাও
+  const edDistPrice = document.getElementById('editDistributorPrice');
+  if (edDistPrice) edDistPrice.addEventListener('input', recalcEdit);
+
+  const edTradeCat = document.getElementById('editTradeCategory');
+  if (edTradeCat) {
+    edTradeCat.addEventListener('change', function() {
+      document.getElementById('editFreeFields').style.display = this.value === 'free' ? 'block' : 'none';
+      document.getElementById('editDiscountFields').style.display = this.value === 'discount' ? 'block' : 'none';
+      recalcEdit();
+    });
+  }
+
+  const edDiscType = document.getElementById('editDiscountType');
+  if (edDiscType) edDiscType.addEventListener('change', recalcEdit);
+
+  const edDiscValue = document.getElementById('editDiscountValue');
+  if (edDiscValue) edDiscValue.addEventListener('input', recalcEdit);
+
+  // ফ্রি ফিল্ডের জন্যও চাইলে করতে পারো, কিন্তু দরকার নেই (তারা শুধু প্রাইসকে প্রভাবিত করে না)
 
   editItemModal.style.display = 'flex';
 }
