@@ -26,7 +26,11 @@ let generatedOTP = null;
 let tempRegistrationData = {};
 let allUsersCache = {};
 let allItemsCache = {};
+let allCustomersCache = {};
+let allOrdersCache = {};
 let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
+let selectedSalespersons = [];
+let draftItems = [];
 
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
@@ -317,12 +321,20 @@ function switchSubView(viewId) {
   else if (viewId === 'itemList') {
     loadItemFormUnits();
     loadItems();
-    // ✅ সেলস হলে তৈরি বাটন লুকাও
     const createBtn = document.getElementById('btnShowCreateItem');
-    if (createBtn) {
-      createBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
-    }
+    if (createBtn) createBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
   }
+  else if (viewId === 'customerList') {
+    loadCustomerFormUnits();
+    loadCustomers();
+    const createCustBtn = document.getElementById('btnShowCreateCustomer');
+    if (createCustBtn) createCustBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
+  }
+  else if (viewId === 'orderForm') {
+    draftItems = [];
+    renderDraftTable();
+  }
+  else if (viewId === 'myOrders') loadMyOrders();
 }
 
 // ========== USER MANAGEMENT ==========
@@ -915,7 +927,6 @@ function renderItemsTable(items) {
 
   Object.entries(items).forEach(([id, item]) => {
     const row = document.createElement('tr');
-    // অ্যাকশন বাটন নির্ধারণ (সেলস ছাড়া সবাই পাবে)
     let actionButtons = '';
     if (currentUser.role !== 'sales') {
       actionButtons = `
@@ -1007,7 +1018,6 @@ async function openEditItemModal(id, item) {
   editingItemId = id;
   const content = document.getElementById('editItemFormContent');
   
-  // Build form
   content.innerHTML = `
     <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
       <div class="input-group" style="flex:1; min-width:200px;">
@@ -1098,7 +1108,6 @@ async function openEditItemModal(id, item) {
     </div>
   `;
 
-  // Load unit dropdown
   const unitSelect = document.getElementById('editItemUnit');
   const lineSelect = document.getElementById('editItemLine');
   const unitsRef = ref(database, 'units');
@@ -1106,9 +1115,7 @@ async function openEditItemModal(id, item) {
   try {
     const unitsSnap = await get(unitsRef);
     units = unitsSnap.val() || {};
-  } catch (err) {
-    console.error('ইউনিট লোড করতে ব্যর্থ:', err);
-  }
+  } catch (err) { console.error('ইউনিট লোড করতে ব্যর্থ:', err); }
   unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
   Object.entries(units).forEach(([unitId, unit]) => {
     const opt = document.createElement('option');
@@ -1134,28 +1141,19 @@ async function openEditItemModal(id, item) {
           lineSelect.appendChild(opt);
         });
       }
-    } catch (err) {
-      console.error('সেলস লাইন লোড করতে ব্যর্থ:', err);
-    }
+    } catch (err) { console.error('সেলস লাইন লোড করতে ব্যর্থ:', err); }
   };
   unitSelect.addEventListener('change', updateEditLines);
-  try {
-    if (unitSelect.value) await updateEditLines();
-  } catch (e) {
-    console.error('updateEditLines error:', e);
-  }
+  try { if (unitSelect.value) await updateEditLines(); } catch (e) { console.error('updateEditLines error:', e); }
 
-  // Recalculate affected price safely
   const recalcEdit = () => {
     const distEl = document.getElementById('editDistributorPrice');
     const catEl = document.getElementById('editTradeCategory');
     const affEl = document.getElementById('editAffectedPrice');
     if (!distEl || !catEl || !affEl) return;
-
     const dist = parseFloat(distEl.value) || 0;
     const cat = catEl.value;
     let aff = dist;
-
     if (cat === 'discount') {
       const discTypeEl = document.getElementById('editDiscountType');
       const discValEl = document.getElementById('editDiscountValue');
@@ -1169,10 +1167,8 @@ async function openEditItemModal(id, item) {
     affEl.value = aff.toFixed(2);
   };
 
-  // Attach listeners only to existing elements
   const edDistPrice = document.getElementById('editDistributorPrice');
   if (edDistPrice) edDistPrice.addEventListener('input', recalcEdit);
-
   const edTradeCat = document.getElementById('editTradeCategory');
   if (edTradeCat) {
     edTradeCat.addEventListener('change', () => {
@@ -1183,10 +1179,8 @@ async function openEditItemModal(id, item) {
       recalcEdit();
     });
   }
-
   const edDiscType = document.getElementById('editDiscountType');
   if (edDiscType) edDiscType.addEventListener('change', recalcEdit);
-
   const edDiscVal = document.getElementById('editDiscountValue');
   if (edDiscVal) edDiscVal.addEventListener('input', recalcEdit);
 
@@ -1215,12 +1209,10 @@ document.getElementById('btnSaveEditItem').addEventListener('click', async () =>
       value: parseFloat(document.getElementById('editDiscountValue')?.value) || 0
     } : {}
   };
-
   if (!updatedItem.itemCode || !updatedItem.description || !updatedItem.uom || isNaN(updatedItem.distributorPrice) || !updatedItem.tradeCategory || !updatedItem.unitId || !updatedItem.line) {
     alert('সব আবশ্যক ফিল্ড পূরণ করুন।');
     return;
   }
-
   try {
     await update(ref(database, 'items/' + editingItemId), updatedItem);
     alert('আইটেম আপডেট সফল হয়েছে।');
@@ -1228,3 +1220,719 @@ document.getElementById('btnSaveEditItem').addEventListener('click', async () =>
     editingItemId = null;
   } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
 });
+
+// ========== CUSTOMER MANAGEMENT ==========
+let customerFormListenersAttached = false;
+
+async function loadCustomerFormUnits() {
+  const unitSelect = document.getElementById('newCustUnit');
+  const lineSelect = document.getElementById('newCustLine');
+  const unitsRef = ref(database, 'units');
+  unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+  try {
+    const snapshot = await get(unitsRef);
+    const units = snapshot.val();
+    if (units) {
+      Object.entries(units).forEach(([unitId, unit]) => {
+        const option = document.createElement('option');
+        option.value = unitId;
+        option.textContent = unit.shortCode;
+        unitSelect.appendChild(option);
+      });
+    }
+    unitSelect.addEventListener('change', async () => {
+      const selectedUnitId = unitSelect.value;
+      lineSelect.innerHTML = '<option value="">প্রথমে ইউনিট সিলেক্ট করুন</option>';
+      lineSelect.disabled = true;
+      if (!selectedUnitId) return;
+      const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+      const unitData = unitSnap.val();
+      if (unitData && unitData.salesLines) {
+        lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+        unitData.salesLines.forEach(line => {
+          const opt = document.createElement('option');
+          opt.value = line;
+          opt.textContent = line;
+          lineSelect.appendChild(opt);
+        });
+        lineSelect.disabled = false;
+      }
+    });
+  } catch (err) { console.error(err); }
+}
+
+function handleSalespersonSearch() {
+  const searchInput = document.getElementById('salespersonSearch');
+  const resultsContainer = document.getElementById('salespersonSearchResults');
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.trim().toLowerCase();
+    if (!term || !allUsersCache) {
+      resultsContainer.style.display = 'none';
+      return;
+    }
+    const filtered = Object.entries(allUsersCache).filter(([uid, user]) => {
+      return (user.enroll && String(user.enroll).toLowerCase().includes(term)) ||
+             (user.name && user.name.toLowerCase().includes(term)) ||
+             (user.email && user.email.toLowerCase().includes(term));
+    });
+    if (filtered.length === 0) {
+      resultsContainer.innerHTML = '<div style="padding:8px;">কোনো ফলাফল নেই</div>';
+      resultsContainer.style.display = 'block';
+      return;
+    }
+    resultsContainer.innerHTML = filtered.map(([uid, user]) => {
+      return `<div data-uid="${uid}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;" class="sp-result-item">
+        ${user.name} (${user.enroll}) - ${user.email}
+      </div>`;
+    }).join('');
+    resultsContainer.style.display = 'block';
+    // Add click listeners to each result
+    document.querySelectorAll('.sp-result-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const uid = item.getAttribute('data-uid');
+        const user = allUsersCache[uid];
+        if (user && !selectedSalespersons.some(sp => sp.uid === uid)) {
+          selectedSalespersons.push({ uid, name: user.name, enroll: user.enroll });
+          renderSelectedSalespersons();
+          searchInput.value = '';
+          resultsContainer.style.display = 'none';
+        }
+      });
+    });
+  });
+  // Hide results when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#salespersonSearch') && !e.target.closest('#salespersonSearchResults')) {
+      resultsContainer.style.display = 'none';
+    }
+  });
+}
+
+function renderSelectedSalespersons() {
+  const container = document.getElementById('selectedSalespersons');
+  container.innerHTML = selectedSalespersons.map((sp, index) => {
+    return `<span class="salesperson-tag">
+      ${sp.name} (${sp.enroll})
+      <span class="remove-tag" data-index="${index}">&times;</span>
+    </span>`;
+  }).join('');
+  // Add remove listeners
+  document.querySelectorAll('.remove-tag').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.getAttribute('data-index'));
+      selectedSalespersons.splice(index, 1);
+      renderSelectedSalespersons();
+    });
+  });
+}
+
+function clearCustomerForm() {
+  document.getElementById('newCustCode').value = '';
+  document.getElementById('newCustName').value = '';
+  document.getElementById('newCustWarehouse').value = '';
+  document.getElementById('newCustUnit').value = '';
+  document.getElementById('newCustLine').innerHTML = '<option value="">প্রথমে ইউনিট সিলেক্ট করুন</option>';
+  document.getElementById('newCustLine').disabled = true;
+  document.getElementById('newCustRegion').value = '';
+  document.getElementById('newCustArea').value = '';
+  document.getElementById('newCustPoint').value = '';
+  document.getElementById('newCustStatus').value = 'active';
+  selectedSalespersons = [];
+  renderSelectedSalespersons();
+  document.getElementById('salespersonSearch').value = '';
+  document.getElementById('salespersonSearchResults').style.display = 'none';
+}
+
+document.getElementById('btnShowCreateCustomer').addEventListener('click', () => {
+  const form = document.getElementById('createCustomerFormContainer');
+  form.style.display = 'block';
+  loadCustomerFormUnits();
+  if (!customerFormListenersAttached) {
+    handleSalespersonSearch();
+    customerFormListenersAttached = true;
+  }
+});
+
+document.getElementById('btnCancelCustomer').addEventListener('click', () => {
+  document.getElementById('createCustomerFormContainer').style.display = 'none';
+  clearCustomerForm();
+});
+
+document.getElementById('btnSaveCustomer').addEventListener('click', async () => {
+  const custCode = document.getElementById('newCustCode').value.trim();
+  const custName = document.getElementById('newCustName').value.trim();
+  const warehouse = document.getElementById('newCustWarehouse').value.trim();
+  const unitId = document.getElementById('newCustUnit').value;
+  const unitShortCode = document.getElementById('newCustUnit').selectedOptions[0]?.text || '';
+  const line = document.getElementById('newCustLine').value;
+  const region = document.getElementById('newCustRegion').value.trim();
+  const area = document.getElementById('newCustArea').value.trim();
+  const point = document.getElementById('newCustPoint').value.trim();
+  const status = document.getElementById('newCustStatus').value;
+  const salespersons = selectedSalespersons.map(sp => sp.uid);
+
+  if (!custCode || !custName || !warehouse || !unitId || !line || !region || !area) {
+    alert('সব আবশ্যক ঘর পূরণ করুন।');
+    return;
+  }
+
+  // Check duplicate customer code
+  if (allCustomersCache) {
+    const exists = Object.values(allCustomersCache).some(cust => cust.custCode === custCode);
+    if (exists) {
+      alert('এই কাস্টমার কোড ইতিমধ্যে আছে।');
+      return;
+    }
+  }
+
+  try {
+    const customersRef = ref(database, 'customers');
+    await push(customersRef, {
+      custCode,
+      custName,
+      warehouse,
+      unitId,
+      unitShortCode,
+      line,
+      region,
+      area,
+      point: point || '',
+      status,
+      salespersons,
+      createdBy: currentUser.uid,
+      createdAt: new Date().toISOString()
+    });
+    alert('কাস্টমার সংরক্ষিত হয়েছে।');
+    clearCustomerForm();
+    document.getElementById('createCustomerFormContainer').style.display = 'none';
+  } catch (err) {
+    alert('সংরক্ষণে সমস্যা: ' + err.message);
+  }
+});
+
+function loadCustomers() {
+  const container = document.getElementById('customersTableContainer');
+  const customersRef = ref(database, 'customers');
+  const searchInput = document.getElementById('customerSearchInput');
+  const exportBtn = document.getElementById('btnExportCustomers');
+
+  onValue(customersRef, (snapshot) => {
+    allCustomersCache = snapshot.val() || {};
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterCustomers(term);
+    renderCustomersTable(filtered);
+  });
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterCustomers(term);
+    renderCustomersTable(filtered);
+  });
+
+  exportBtn.addEventListener('click', () => {
+    exportCustomersToCSV(allCustomersCache);
+  });
+}
+
+function filterCustomers(term) {
+  if (!allCustomersCache) return {};
+  if (!term) return allCustomersCache;
+  const filtered = {};
+  Object.entries(allCustomersCache).forEach(([id, cust]) => {
+    if (String(cust.custCode).toLowerCase().includes(term) || String(cust.custName).toLowerCase().includes(term)) {
+      filtered[id] = cust;
+    }
+  });
+  return filtered;
+}
+
+function renderCustomersTable(customers) {
+  const container = document.getElementById('customersTableContainer');
+  container.innerHTML = '';
+
+  if (!customers || Object.keys(customers).length === 0) {
+    container.innerHTML = '<p class="empty-message">কোনো কাস্টমার পাওয়া যায়নি।</p>';
+    return;
+  }
+
+  // Filter by access: sales only see assigned customers
+  let visibleCustomers = customers;
+  if (currentUser.role === 'sales') {
+    visibleCustomers = {};
+    Object.entries(customers).forEach(([id, cust]) => {
+      if (cust.salespersons && cust.salespersons.includes(currentUser.uid)) {
+        visibleCustomers[id] = cust;
+      }
+    });
+  }
+
+  const table = document.createElement('table');
+  table.className = 'approval-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>কোড</th><th>নাম</th><th>গুদাম</th><th>ইউনিট</th><th>লাইন</th>
+        <th>অঞ্চল</th><th>এলাকা</th><th>পয়েন্ট</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  Object.entries(visibleCustomers).forEach(([id, cust]) => {
+    const row = document.createElement('tr');
+    let actionButtons = '';
+    if (currentUser.role !== 'sales') {
+      actionButtons = `
+        <button class="btn-edit-customer" data-id="${id}" style="background:#f59e0b; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:4px;">Edit</button>
+        <button class="btn-delete-customer" data-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>
+      `;
+    } else {
+      actionButtons = '—';
+    }
+    row.innerHTML = `
+      <td>${cust.custCode}</td>
+      <td>${cust.custName}</td>
+      <td>${cust.warehouse}</td>
+      <td>${cust.unitShortCode || ''}</td>
+      <td>${cust.line}</td>
+      <td>${cust.region}</td>
+      <td>${cust.area}</td>
+      <td>${cust.point || ''}</td>
+      <td>${cust.status}</td>
+      <td>${actionButtons}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-responsive';
+  tableWrapper.appendChild(table);
+  container.appendChild(tableWrapper);
+
+  attachCustomerActions(customers);
+}
+
+function attachCustomerActions(customers) {
+  document.querySelectorAll('.btn-edit-customer').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      const cust = customers[id];
+      if (!cust) return;
+      openEditCustomerModal(id, cust);
+    });
+  });
+  document.querySelectorAll('.btn-delete-customer').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      if (!confirm('কাস্টমারটি মুছে ফেলতে চান?')) return;
+      const id = e.target.getAttribute('data-id');
+      try {
+        await remove(ref(database, 'customers/' + id));
+        alert('কাস্টমার ডিলিট করা হয়েছে।');
+      } catch (err) { alert('ডিলিট ব্যর্থ: ' + err.message); }
+    });
+  });
+}
+
+function exportCustomersToCSV(customers) {
+  if (!customers || Object.keys(customers).length === 0) {
+    alert('এক্সপোর্ট করার মতো কোনো কাস্টমার নেই।');
+    return;
+  }
+  const rows = [['Code', 'Name', 'Warehouse', 'Unit', 'Line', 'Region', 'Area', 'Point', 'Status']];
+  Object.values(customers).forEach(cust => {
+    rows.push([
+      cust.custCode || '', cust.custName || '', cust.warehouse || '',
+      cust.unitShortCode || '', cust.line || '', cust.region || '',
+      cust.area || '', cust.point || '', cust.status || ''
+    ]);
+  });
+  let csvContent = '';
+  rows.forEach(row => {
+    const escapedRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
+    csvContent += escapedRow.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `customers_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+// ========== EDIT CUSTOMER MODAL ==========
+const editCustomerModal = document.getElementById('editCustomerModal');
+let editingCustomerId = null;
+
+document.getElementById('btnCloseEditCustomerModal').addEventListener('click', () => {
+  editCustomerModal.style.display = 'none';
+  editingCustomerId = null;
+});
+
+async function openEditCustomerModal(id, cust) {
+  editingCustomerId = id;
+  const content = document.getElementById('editCustomerFormContent');
+  
+  content.innerHTML = `
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;"><label>কোড</label><input type="text" id="editCustCode" value="${cust.custCode}"></div>
+      <div class="input-group" style="flex:1; min-width:200px;"><label>নাম</label><input type="text" id="editCustName" value="${cust.custName}"></div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;"><label>গুদাম</label><input type="text" id="editCustWarehouse" value="${cust.warehouse}"></div>
+      <div class="input-group" style="flex:1; min-width:200px;"><label>ইউনিট</label><select id="editCustUnit"><option value="">লোড...</option></select></div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;"><label>লাইন</label><select id="editCustLine"><option value="">প্রথমে ইউনিট সিলেক্ট করুন</option></select></div>
+      <div class="input-group" style="flex:1; min-width:200px;"><label>অঞ্চল</label><input type="text" id="editCustRegion" value="${cust.region}"></div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;"><label>এলাকা</label><input type="text" id="editCustArea" value="${cust.area}"></div>
+      <div class="input-group" style="flex:1; min-width:200px;"><label>পয়েন্ট</label><input type="text" id="editCustPoint" value="${cust.point || ''}"></div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>সেলস পারসন</label>
+        <div id="editSalespersonsContainer"></div>
+      </div>
+    </div>
+    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <div class="input-group" style="flex:1; min-width:200px;">
+        <label>স্ট্যাটাস</label>
+        <select id="editCustStatus">
+          <option value="active" ${cust.status==='active'?'selected':''}>Active</option>
+          <option value="inactive" ${cust.status==='inactive'?'selected':''}>Inactive</option>
+        </select>
+      </div>
+    </div>
+  `;
+
+  // Load unit dropdown for edit
+  const unitSelect = document.getElementById('editCustUnit');
+  const lineSelect = document.getElementById('editCustLine');
+  const unitsRef = ref(database, 'units');
+  const unitsSnap = await get(unitsRef);
+  const units = unitsSnap.val() || {};
+  unitSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+  Object.entries(units).forEach(([unitId, unit]) => {
+    const opt = document.createElement('option');
+    opt.value = unitId;
+    opt.textContent = unit.shortCode;
+    if (unitId === cust.unitId) opt.selected = true;
+    unitSelect.appendChild(opt);
+  });
+  const updateLines = async () => {
+    const selectedUnitId = unitSelect.value;
+    lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+    if (!selectedUnitId) return;
+    const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+    const unitData = unitSnap.val();
+    if (unitData && unitData.salesLines) {
+      unitData.salesLines.forEach(line => {
+        const opt = document.createElement('option');
+        opt.value = line;
+        opt.textContent = line;
+        if (line === cust.line) opt.selected = true;
+        lineSelect.appendChild(opt);
+      });
+    }
+  };
+  unitSelect.addEventListener('change', updateLines);
+  if (unitSelect.value) await updateLines();
+
+  // Salespersons display (readonly for simplicity; could add search later)
+  const spContainer = document.getElementById('editSalespersonsContainer');
+  const spUids = cust.salespersons || [];
+  let spHtml = '';
+  spUids.forEach(uid => {
+    const user = allUsersCache[uid];
+    if (user) {
+      spHtml += `<span class="salesperson-tag">${user.name} (${user.enroll})</span> `;
+    }
+  });
+  spContainer.innerHTML = spHtml || 'কোনো সেলস পারসন নেই';
+
+  editCustomerModal.style.display = 'flex';
+}
+
+document.getElementById('btnSaveEditCustomer').addEventListener('click', async () => {
+  if (!editingCustomerId) return;
+  const updatedCust = {
+    custCode: document.getElementById('editCustCode')?.value?.trim() || '',
+    custName: document.getElementById('editCustName')?.value?.trim() || '',
+    warehouse: document.getElementById('editCustWarehouse')?.value?.trim() || '',
+    unitId: document.getElementById('editCustUnit')?.value || '',
+    unitShortCode: document.getElementById('editCustUnit')?.selectedOptions?.[0]?.text || '',
+    line: document.getElementById('editCustLine')?.value || '',
+    region: document.getElementById('editCustRegion')?.value?.trim() || '',
+    area: document.getElementById('editCustArea')?.value?.trim() || '',
+    point: document.getElementById('editCustPoint')?.value?.trim() || '',
+    status: document.getElementById('editCustStatus')?.value || 'active',
+    // salespersons remain unchanged in this simple edit; could be extended
+  };
+  if (!updatedCust.custCode || !updatedCust.custName || !updatedCust.warehouse || !updatedCust.unitId || !updatedCust.line || !updatedCust.region || !updatedCust.area) {
+    alert('সব আবশ্যক ফিল্ড পূরণ করুন।');
+    return;
+  }
+  try {
+    await update(ref(database, 'customers/' + editingCustomerId), updatedCust);
+    alert('কাস্টমার আপডেট সফল হয়েছে।');
+    editCustomerModal.style.display = 'none';
+    editingCustomerId = null;
+  } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
+});
+
+// ========== ORDER FORM ==========
+document.getElementById('btnLoadCustomer').addEventListener('click', async () => {
+  const code = document.getElementById('orderCustomerCode').value.trim();
+  if (!code) return;
+  let customer = null;
+  if (allCustomersCache) {
+    customer = Object.values(allCustomersCache).find(c => c.custCode === code);
+  }
+  if (!customer) {
+    alert('কাস্টমার পাওয়া যায়নি।');
+    return;
+  }
+  // Role-based access for sales
+  if (currentUser.role === 'sales') {
+    const isAssigned = customer.salespersons && customer.salespersons.includes(currentUser.uid);
+    if (!isAssigned) {
+      alert('আপনি এই কাস্টমারকে অ্যাক্সেস করতে পারবেন না।');
+      return;
+    }
+  }
+  document.getElementById('custName').textContent = customer.custName;
+  document.getElementById('custWarehouse').textContent = customer.warehouse;
+  document.getElementById('custRegion').textContent = customer.region;
+  document.getElementById('custArea').textContent = customer.area;
+  document.getElementById('custUnit').textContent = customer.unitShortCode || '';
+  document.getElementById('custLine').textContent = customer.line;
+  document.getElementById('customerInfo').style.display = 'block';
+  window.selectedCustomer = customer; // store for order submission
+});
+
+document.getElementById('btnSearchItem').addEventListener('click', () => {
+  const itemCode = document.getElementById('orderItemSearch').value.trim();
+  if (!itemCode || !allItemsCache) return;
+  const item = Object.values(allItemsCache).find(it => it.itemCode === itemCode);
+  if (!item) {
+    alert('আইটেম পাওয়া যায়নি।');
+    return;
+  }
+  // Check if item's line matches customer's line? (optional)
+  document.getElementById('itemDesc').textContent = item.description;
+  document.getElementById('itemPrice').textContent = item.affectedDistributorPrice || item.distributorPrice;
+  document.getElementById('itemDetails').style.display = 'block';
+  window.selectedItem = item;
+});
+
+function renderDraftTable() {
+  const tbody = document.querySelector('#draftOrderTable tbody');
+  tbody.innerHTML = '';
+  let total = 0;
+  draftItems.forEach((item, index) => {
+    const itemTotal = item.quantity * item.price;
+    total += itemTotal;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.itemCode}</td>
+      <td>${item.description}</td>
+      <td><input type="number" value="${item.quantity}" min="1" class="draft-qty" data-index="${index}" style="width:80px;"></td>
+      <td>${item.price}</td>
+      <td>${itemTotal.toFixed(2)}</td>
+      <td><button class="btn-delete-draft" data-index="${index}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">বাদ দিন</button></td>
+    `;
+    tbody.appendChild(row);
+  });
+  document.getElementById('draftTotal').textContent = total.toFixed(2);
+
+  // Add event listeners for quantity change
+  document.querySelectorAll('.draft-qty').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.getAttribute('data-index'));
+      const newQty = parseInt(e.target.value) || 1;
+      draftItems[index].quantity = newQty;
+      renderDraftTable();
+    });
+  });
+  document.querySelectorAll('.btn-delete-draft').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.getAttribute('data-index'));
+      draftItems.splice(index, 1);
+      renderDraftTable();
+    });
+  });
+}
+
+document.getElementById('btnAddToDraft').addEventListener('click', () => {
+  if (!window.selectedItem) {
+    alert('প্রথমে একটি আইটেম খুঁজুন।');
+    return;
+  }
+  const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
+  const item = window.selectedItem;
+  const existing = draftItems.find(di => di.itemCode === item.itemCode);
+  if (existing) {
+    existing.quantity += quantity;
+  } else {
+    draftItems.push({
+      itemCode: item.itemCode,
+      description: item.description,
+      price: parseFloat(item.affectedDistributorPrice || item.distributorPrice),
+      quantity: quantity,
+    });
+  }
+  renderDraftTable();
+  document.getElementById('itemQuantity').value = 1;
+});
+
+document.getElementById('btnSubmitOrder').addEventListener('click', async () => {
+  if (!window.selectedCustomer) {
+    alert('কাস্টমার লোড করা হয়নি।');
+    return;
+  }
+  if (draftItems.length === 0) {
+    alert('ড্রাফট অর্ডার খালি।');
+    return;
+  }
+  const orderData = {
+    customerCode: window.selectedCustomer.custCode,
+    customerName: window.selectedCustomer.custName,
+    warehouse: window.selectedCustomer.warehouse,
+    region: window.selectedCustomer.region,
+    area: window.selectedCustomer.area,
+    unit: window.selectedCustomer.unitShortCode || '',
+    line: window.selectedCustomer.line,
+    items: draftItems,
+    total: draftItems.reduce((sum, di) => sum + di.quantity * di.price, 0),
+    createdBy: currentUser.uid,
+    createdByName: currentUser.name,
+    createdAt: new Date().toISOString()
+  };
+  try {
+    const ordersRef = ref(database, 'orders');
+    await push(ordersRef, orderData);
+    alert('অর্ডার সাবমিট হয়েছে।');
+    draftItems = [];
+    renderDraftTable();
+    window.selectedCustomer = null;
+    window.selectedItem = null;
+    document.getElementById('customerInfo').style.display = 'none';
+    document.getElementById('itemDetails').style.display = 'none';
+    document.getElementById('orderCustomerCode').value = '';
+    document.getElementById('orderItemSearch').value = '';
+  } catch (err) {
+    alert('অর্ডার সাবমিট ব্যর্থ: ' + err.message);
+  }
+});
+
+// ========== MY ORDERS ==========
+function loadMyOrders() {
+  const container = document.getElementById('myOrdersContainer');
+  const ordersRef = ref(database, 'orders');
+  const searchInput = document.getElementById('orderSearchInput');
+  const exportBtn = document.getElementById('btnExportOrders');
+
+  onValue(ordersRef, (snapshot) => {
+    allOrdersCache = snapshot.val() || {};
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterOrders(term);
+    renderOrdersTable(filtered);
+  });
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.trim().toLowerCase();
+    const filtered = filterOrders(term);
+    renderOrdersTable(filtered);
+  });
+
+  exportBtn.addEventListener('click', () => {
+    exportOrdersToCSV(allOrdersCache);
+  });
+}
+
+function filterOrders(term) {
+  let visible = allOrdersCache;
+  // Role-based: sales see only own orders
+  if (currentUser.role === 'sales') {
+    visible = {};
+    Object.entries(allOrdersCache).forEach(([id, order]) => {
+      if (order.createdBy === currentUser.uid) {
+        visible[id] = order;
+      }
+    });
+  }
+  if (!term) return visible;
+  const filtered = {};
+  Object.entries(visible).forEach(([id, order]) => {
+    if (String(order.customerCode).toLowerCase().includes(term) || String(id).toLowerCase().includes(term)) {
+      filtered[id] = order;
+    }
+  });
+  return filtered;
+}
+
+function renderOrdersTable(orders) {
+  const container = document.getElementById('myOrdersContainer');
+  container.innerHTML = '';
+
+  if (!orders || Object.keys(orders).length === 0) {
+    container.innerHTML = '<p class="empty-message">কোনো অর্ডার পাওয়া যায়নি।</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'approval-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>অর্ডার আইডি</th><th>কাস্টমার কোড</th><th>কাস্টমার</th><th>মোট</th><th>তারিখ</th><th>ক্রেতা</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  Object.entries(orders).forEach(([id, order]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${id}</td>
+      <td>${order.customerCode}</td>
+      <td>${order.customerName}</td>
+      <td>${order.total?.toFixed(2)}</td>
+      <td>${new Date(order.createdAt).toLocaleDateString('bn-BD')}</td>
+      <td>${order.createdByName || ''}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-responsive';
+  tableWrapper.appendChild(table);
+  container.appendChild(tableWrapper);
+}
+
+function exportOrdersToCSV(orders) {
+  if (!orders || Object.keys(orders).length === 0) {
+    alert('এক্সপোর্ট করার মতো কোনো অর্ডার নেই।');
+    return;
+  }
+  const rows = [['Order ID', 'Customer Code', 'Customer Name', 'Total', 'Date', 'Created By']];
+  Object.entries(orders).forEach(([id, order]) => {
+    rows.push([
+      id, order.customerCode || '', order.customerName || '',
+      order.total || '', new Date(order.createdAt).toLocaleDateString('bn-BD'),
+      order.createdByName || ''
+    ]);
+  });
+  let csvContent = '';
+  rows.forEach(row => {
+    const escapedRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
+    csvContent += escapedRow.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `orders_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}

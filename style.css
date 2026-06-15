@@ -104,3 +104,79 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
     font-size: 14px;
     width: 100%;
 }
+
+/* Customer & Order specific */
+.salesperson-tag {
+    display: inline-flex;
+    align-items: center;
+    background: #e0e7ff;
+    color: #1e3c72;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    gap: 6px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+.salesperson-tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+}
+#salespersonSearchResults div {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #e2e8f0;
+}
+#salespersonSearchResults div:hover {
+    background: #f1f5f9;
+}
+
+/* Draft order table */
+#draftOrderTable input {
+    width: 80px;
+    padding: 5px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+/* Customer form specific */
+#createCustomerFormContainer .input-group {
+    margin-bottom: 0;
+}
+#createCustomerFormContainer .input-group input,
+#createCustomerFormContainer .input-group select {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}
+#createCustomerFormContainer h4 {
+    color: #1e3c72;
+    margin-top: 10px;
+}
+@media (max-width: 600px) {
+    #createCustomerFormContainer .form-row {
+        flex-direction: column !important;
+    }
+}
+
+/* Edit Customer Modal */
+#editCustomerFormContent .input-group {
+    margin-bottom: 0;
+}
+#editCustomerFormContent .input-group input,
+#editCustomerFormContent .input-group select {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}
+
+/* My Orders table */
+#myOrdersContainer .approval-table {
+    min-width: 700px;
+}

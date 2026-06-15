@@ -147,6 +147,7 @@
                 <li><a data-view="orderForm">Order Form</a></li>
                 <li><a data-view="customerList">Customer List</a></li>
                 <li><a data-view="itemList">Item List</a></li>
+                <li><a data-view="myOrders">My Orders</a></li>
                 <li><a data-view="resetPassword">Reset Password</a></li>
                 <li id="adminApprovalsMenu" style="display:none;"><a data-view="userApprovals">User Approvals</a></li>
                 <li id="adminManageUnitsMenu" style="display:none;"><a data-view="manageUnits">Manage Units</a></li>
@@ -159,20 +160,100 @@
                 <h2>ড্যাশবোর্ড</h2>
                 <p>স্বাগতম, <span id="loggedUserName"></span>! আপনি সফলভাবে লগইন করেছেন।</p>
             </div>
-            <!-- Order Form (placeholder) -->
+
+            <!-- Order Form View -->
             <div id="orderForm-view" class="sub-view">
                 <h2>অর্ডার ফর্ম</h2>
-                <p>এই অংশটি শীঘ্রই সংযুক্ত করা হবে।</p>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="orderCustomerCode" placeholder="কাস্টমার কোড লিখুন" style="flex:1; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                    <button id="btnLoadCustomer" class="btn btn-primary" style="width:auto;">লোড</button>
+                </div>
+                <div id="customerInfo" style="display:none; background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                    <p><strong>নাম:</strong> <span id="custName"></span></p>
+                    <p><strong>গুদাম:</strong> <span id="custWarehouse"></span></p>
+                    <p><strong>অঞ্চল:</strong> <span id="custRegion"></span></p>
+                    <p><strong>এলাকা:</strong> <span id="custArea"></span></p>
+                    <p><strong>ইউনিট:</strong> <span id="custUnit"></span></p>
+                    <p><strong>লাইন:</strong> <span id="custLine"></span></p>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="orderItemSearch" placeholder="আইটেম কোড লিখুন" style="flex:1; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                    <button id="btnSearchItem" class="btn btn-secondary" style="width:auto;">খুঁজুন</button>
+                </div>
+                <div id="itemDetails" style="display:none; background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                    <p><strong>বিবরণ:</strong> <span id="itemDesc"></span></p>
+                    <p><strong>দর:</strong> <span id="itemPrice"></span></p>
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+                        <label>পরিমাণ:</label>
+                        <input type="number" id="itemQuantity" min="1" value="1" style="width:100px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                        <button id="btnAddToDraft" class="btn btn-success" style="width:auto;">Add</button>
+                    </div>
+                </div>
+
+                <h3>ড্রাফট অর্ডার</h3>
+                <table class="approval-table" id="draftOrderTable">
+                    <thead><tr><th>কোড</th><th>বিবরণ</th><th>পরিমাণ</th><th>দর</th><th>মোট</th><th>অ্যাকশন</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div style="text-align:right; margin-top:10px; font-size:18px; font-weight:bold;">সর্বমোট: <span id="draftTotal">0</span></div>
+                <button id="btnSubmitOrder" class="btn btn-primary" style="width:auto; margin-top:15px;">অর্ডার সাবমিট</button>
             </div>
-            <!-- Customer List (placeholder) -->
+
+            <!-- Customer List View -->
             <div id="customerList-view" class="sub-view">
                 <h2>কাস্টমার তালিকা</h2>
-                <p>এখানে কাস্টমারদের তালিকা প্রদর্শিত হবে।</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    <button id="btnShowCreateCustomer" class="btn btn-primary" style="width:auto; padding:10px 20px;"><i class="fas fa-plus"></i> নতুন কাস্টমার</button>
+                    <input type="text" id="customerSearchInput" placeholder="কাস্টমার কোড বা নাম দিয়ে সার্চ" style="flex:1; min-width:200px; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                    <button id="btnExportCustomers" class="btn btn-primary" style="width:auto; padding:10px 20px;"><i class="fas fa-download"></i> এক্সপোর্ট (CSV)</button>
+                </div>
+
+                <div id="createCustomerFormContainer" style="display:none; background:#fff; padding:20px; border-radius:10px; margin-bottom:25px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                    <h3>নতুন কাস্টমার তৈরি</h3>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>কাস্টমার কোড</label><input type="text" id="newCustCode" required></div>
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>কাস্টমার নাম</label><input type="text" id="newCustName" required></div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>গুদাম</label><input type="text" id="newCustWarehouse" required></div>
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>ইউনিট</label><select id="newCustUnit" required><option value="">সিলেক্ট করুন</option></select></div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>লাইন</label><select id="newCustLine" disabled required><option value="">প্রথমে ইউনিট সিলেক্ট করুন</option></select></div>
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>অঞ্চল</label><input type="text" id="newCustRegion" required></div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>এলাকা</label><input type="text" id="newCustArea" required></div>
+                        <div class="input-group" style="flex:1; min-width:200px;"><label>পয়েন্ট</label><input type="text" id="newCustPoint"></div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;">
+                            <label>সেলস পারসন (অনুসন্ধান)</label>
+                            <input type="text" id="salespersonSearch" placeholder="এনরোল/নাম/ইমেইল লিখুন">
+                            <div id="salespersonSearchResults" style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; max-height:120px; overflow-y:auto; display:none;"></div>
+                            <div id="selectedSalespersons" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;"></div>
+                        </div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:200px;">
+                            <label>স্ট্যাটাস</label>
+                            <select id="newCustStatus" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="btnSaveCustomer" class="btn btn-success" style="width:auto; padding:10px 30px;">সাবমিট</button>
+                    <button id="btnCancelCustomer" class="btn btn-danger" style="width:auto; padding:10px 30px; margin-left:10px;">বাতিল</button>
+                </div>
+
+                <div id="customersTableContainer"><p>লোড হচ্ছে...</p></div>
             </div>
-            <!-- ITEM LIST VIEW (UPDATED) -->
+
+            <!-- Item List View (complete) -->
             <div id="itemList-view" class="sub-view">
                 <h2>আইটেম তালিকা</h2>
-                
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
                     <button id="btnShowCreateItem" class="btn btn-primary" style="width:auto; padding:10px 20px;">
                         <i class="fas fa-plus"></i> নতুন আইটেম তৈরি
@@ -284,7 +365,17 @@
                 </div>
             </div>
 
-            <!-- Reset Password -->
+            <!-- My Orders View -->
+            <div id="myOrders-view" class="sub-view">
+                <h2>আমার অর্ডার</h2>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="orderSearchInput" placeholder="কাস্টমার কোড বা অর্ডার আইডি দিয়ে সার্চ" style="flex:1; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                    <button id="btnExportOrders" class="btn btn-primary" style="width:auto; padding:10px 20px;"><i class="fas fa-download"></i> এক্সপোর্ট (CSV)</button>
+                </div>
+                <div id="myOrdersContainer"><p>লোড হচ্ছে...</p></div>
+            </div>
+
+            <!-- Reset Password View -->
             <div id="resetPassword-view" class="sub-view">
                 <h2>পাসওয়ার্ড রিসেট</h2>
                 <form onsubmit="return false;">
@@ -308,7 +399,7 @@
                 </form>
             </div>
 
-            <!-- User Approvals -->
+            <!-- User Approvals View -->
             <div id="userApprovals-view" class="sub-view">
                 <h2>ইউজার ম্যানেজমেন্ট</h2>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
@@ -318,7 +409,7 @@
                 <div id="allUsersContainer">লোড হচ্ছে...</div>
             </div>
 
-            <!-- Manage Units -->
+            <!-- Manage Units View -->
             <div id="manageUnits-view" class="sub-view">
                 <h2>ইউনিট ম্যানেজমেন্ট</h2>
                 <div id="manageUnitsContainer"></div>
@@ -352,6 +443,18 @@
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:15px;">
                 <button id="btnSaveEditItem" class="btn btn-primary" style="width:auto;">Save</button>
                 <button id="btnCloseEditItemModal" class="btn btn-danger" style="width:auto;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Customer Modal -->
+    <div id="editCustomerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:100;">
+        <div style="background:#fff; padding:25px; border-radius:12px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto;">
+            <h3>কাস্টমার এডিট করুন</h3>
+            <div id="editCustomerFormContent"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:15px;">
+                <button id="btnSaveEditCustomer" class="btn btn-primary" style="width:auto;">Save</button>
+                <button id="btnCloseEditCustomerModal" class="btn btn-danger" style="width:auto;">Cancel</button>
             </div>
         </div>
     </div>
