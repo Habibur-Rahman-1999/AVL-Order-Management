@@ -1316,7 +1316,7 @@ function handleSalespersonSearch() {
   const searchInput = document.getElementById('salespersonSearch');
   const resultsContainer = document.getElementById('salespersonSearchResults');
 
-  // ✅ আলাদা লাইনে event listener
+  //  আলাদা লাইনে event listener
   searchInput.addEventListener('input', () => {
     const term = searchInput.value.trim().toLowerCase();
     // বাইরের resultsContainer-ই ব্যবহার করব, ভিতরে নতুন করে ডিক্লেয়ার করব না
