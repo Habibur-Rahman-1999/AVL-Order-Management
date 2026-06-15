@@ -325,12 +325,23 @@ function switchSubView(viewId) {
     if (createBtn) createBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
   }
   else if (viewId === 'customerList') {
-    // ইউজার ক্যাশ লোড (যদি না থাকে)
+    // ইউজার ক্যাশ লোড (নিশ্চিত করতে get ব্যবহার করো)
     if (!allUsersCache || Object.keys(allUsersCache).length === 0) {
       const usersRef = ref(database, 'users');
-      onValue(usersRef, (snapshot) => {
+      get(usersRef).then(snapshot => {
         allUsersCache = snapshot.val() || {};
+        // ক্যাশ লোড হওয়ার পর সার্চ হ্যান্ডলার কল (একবার)
+        if (!customerFormListenersAttached) {
+          handleSalespersonSearch();
+          customerFormListenersAttached = true;
+        }
       });
+    } else {
+      // আগেই লোডেড থাকলে সরাসরি কল
+      if (!customerFormListenersAttached) {
+        handleSalespersonSearch();
+        customerFormListenersAttached = true;
+      }
     }
     loadCustomerFormUnits();
     loadCustomers();
@@ -1369,10 +1380,7 @@ document.getElementById('btnShowCreateCustomer').addEventListener('click', () =>
   const form = document.getElementById('createCustomerFormContainer');
   form.style.display = 'block';
   loadCustomerFormUnits();
-  if (!customerFormListenersAttached) {
-    handleSalespersonSearch();
-    customerFormListenersAttached = true;
-  }
+  // handleSalespersonSearch() আর কল করতে হবে না, কারণ সেটা switchSubView-এ হয়েছে
 });
 
 document.getElementById('btnCancelCustomer').addEventListener('click', () => {
