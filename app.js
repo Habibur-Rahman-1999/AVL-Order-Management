@@ -161,8 +161,8 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         email: user.email,
         name: userData.name,
         role: isAdmin ? 'admin' : (userData.role || 'sales'),
-        status: userData.status,
-        salesLine: userData.salesLine || '' // ✅ নতুন লাইন
+        status: userData.status,   // ✅ এখানে কমা দিন
+        salesLine: userData.salesLine || ''
       };
       toggleLoading('btnLogin', false, defaultHtml);
       showMainApp();
