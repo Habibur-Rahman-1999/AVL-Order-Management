@@ -325,12 +325,34 @@ function switchSubView(viewId) {
     if (createBtn) createBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
   }
   else if (viewId === 'customerList') {
+    // ইউজার ক্যাশ লোড (যদি না থাকে)
+    if (!allUsersCache || Object.keys(allUsersCache).length === 0) {
+      const usersRef = ref(database, 'users');
+      onValue(usersRef, (snapshot) => {
+        allUsersCache = snapshot.val() || {};
+      });
+    }
     loadCustomerFormUnits();
     loadCustomers();
     const createCustBtn = document.getElementById('btnShowCreateCustomer');
     if (createCustBtn) createCustBtn.style.display = (currentUser.role === 'sales') ? 'none' : 'inline-block';
   }
   else if (viewId === 'orderForm') {
+    // নিশ্চিত করো আইটেম ক্যাশ লোড হয়েছে
+    if (!allItemsCache || Object.keys(allItemsCache).length === 0) {
+      // আইটেম লোড (একবার)
+      const itemsRef = ref(database, 'items');
+      onValue(itemsRef, (snapshot) => {
+        allItemsCache = snapshot.val() || {};
+      });
+    }
+    // কাস্টমার ক্যাশও লোড করো (পরবর্তী সমস্যার জন্য)
+    if (!allCustomersCache || Object.keys(allCustomersCache).length === 0) {
+      const custRef = ref(database, 'customers');
+      onValue(custRef, (snapshot) => {
+        allCustomersCache = snapshot.val() || {};
+      });
+    }
     draftItems = [];
     renderDraftTable();
   }
@@ -1712,14 +1734,16 @@ document.getElementById('btnLoadCustomer').addEventListener('click', async () =>
 });
 
 document.getElementById('btnSearchItem').addEventListener('click', () => {
-  const itemCode = document.getElementById('orderItemSearch').value.trim();
-  if (!itemCode || !allItemsCache) return;
-  const item = Object.values(allItemsCache).find(it => it.itemCode === itemCode);
+  const searchTerm = document.getElementById('orderItemSearch').value.trim().toLowerCase();
+  if (!searchTerm || !allItemsCache) return;
+  const item = Object.values(allItemsCache).find(it => 
+    String(it.itemCode).toLowerCase() === searchTerm ||
+    (it.description && it.description.toLowerCase().includes(searchTerm))
+  );
   if (!item) {
     alert('আইটেম পাওয়া যায়নি।');
     return;
   }
-  // Check if item's line matches customer's line? (optional)
   document.getElementById('itemDesc').textContent = item.description;
   document.getElementById('itemPrice').textContent = item.affectedDistributorPrice || item.distributorPrice;
   document.getElementById('itemDetails').style.display = 'block';
