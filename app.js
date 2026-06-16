@@ -31,6 +31,7 @@ let allOrdersCache = {};
 let currentUser = { uid: null, email: null, name: null, role: 'user', status: null };
 let selectedSalespersons = [];
 let draftItems = [];
+let itemUnitListenerAttached = false;
 
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
@@ -751,24 +752,27 @@ async function loadItemFormUnits() {
         unitSelect.appendChild(option);
       });
     }
-    unitSelect.addEventListener('change', async () => {
-      const selectedUnitId = unitSelect.value;
-      lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
-      lineSelect.disabled = true;
-      if (!selectedUnitId) return;
-      const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
-      const unitData = unitSnap.val();
-      if (unitData && unitData.salesLines) {
-        const uniqueLines = [...new Set(unitData.salesLines)]; // ✅ ডুপ্লিকেট বাদ
-        uniqueLines.forEach(line => {
-          const opt = document.createElement('option');
-          opt.value = line;
-          opt.textContent = line;
-          lineSelect.appendChild(opt);
-        });
-        lineSelect.disabled = false;
-      }
-    });
+    if (!itemUnitListenerAttached) {
+      unitSelect.addEventListener('change', async () => {
+        const selectedUnitId = unitSelect.value;
+        lineSelect.innerHTML = '<option value="">সিলেক্ট করুন</option>';
+        lineSelect.disabled = true;
+        if (!selectedUnitId) return;
+        const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
+        const unitData = unitSnap.val();
+        if (unitData && unitData.salesLines) {
+          const uniqueLines = [...new Set(unitData.salesLines)]; // ✅ ডুপ্লিকেট বাদ
+          uniqueLines.forEach(line => {
+            const opt = document.createElement('option');
+            opt.value = line;
+            opt.textContent = line;
+            lineSelect.appendChild(opt);
+          });
+          lineSelect.disabled = false;
+        }
+      });
+      itemUnitListenerAttached = true;
+    }
   } catch (err) { console.error(err); }
 }
 
@@ -1765,11 +1769,12 @@ document.getElementById('btnSaveEditCustomer').addEventListener('click', async (
   } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
 });
 
-// কাস্টমার অটো-সাজেশন
+// কাস্টমার অটো-সাজেশন (ইনপুটের নিচে ড্রপডাউন)
 const custInput = document.getElementById('orderCustomerCode');
 const custDropdown = document.createElement('div');
 custDropdown.id = 'customerDropdown';
-custDropdown.style.cssText = 'position:absolute; background:#fff; border:1px solid #e2e8f0; border-radius:4px; max-height:200px; overflow-y:auto; z-index:50; display:none; width:100%;';
+// পজিশনিং: parent relative করে dropdown-এর top ও left ঠিক করবে
+custDropdown.style.cssText = 'position:absolute; top:100%; left:0; width:100%; background:#fff; border:1px solid #e2e8f0; border-radius:0 0 4px 4px; max-height:200px; overflow-y:auto; z-index:50; display:none;';
 custInput.parentElement.style.position = 'relative';
 custInput.parentElement.appendChild(custDropdown);
 
@@ -1779,15 +1784,28 @@ custInput.addEventListener('input', () => {
     custDropdown.style.display = 'none';
     return;
   }
-  const matches = Object.entries(allCustomersCache).filter(([id, cust]) =>
+  
+  // ফিল্টার করা কাস্টমার
+  let customerList = Object.entries(allCustomersCache);
+  
+  // সেলস ইউজার হলে শুধু নিজের অ্যাসাইন করা কাস্টমার
+  if (currentUser.role === 'sales') {
+    customerList = customerList.filter(([id, cust]) => {
+      return cust.salespersons && cust.salespersons.includes(currentUser.uid);
+    });
+  }
+  
+  const matches = customerList.filter(([id, cust]) =>
     String(cust.custCode).toLowerCase().includes(term) ||
     (cust.custName && cust.custName.toLowerCase().includes(term))
   );
+  
   if (matches.length === 0) {
     custDropdown.innerHTML = '<div style="padding:8px;">কোনো কাস্টমার পাওয়া যায়নি</div>';
     custDropdown.style.display = 'block';
     return;
   }
+  
   custDropdown.innerHTML = matches.map(([id, cust]) =>
     `<div data-id="${id}" class="cust-search-item" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;">
       ${cust.custCode} - ${cust.custName}
@@ -1795,12 +1813,13 @@ custInput.addEventListener('input', () => {
   ).join('');
   custDropdown.style.display = 'block';
 
+  // ক্লিক ইভেন্ট
   document.querySelectorAll('.cust-search-item').forEach(elem => {
     elem.addEventListener('click', () => {
       const id = elem.getAttribute('data-id');
       const customer = allCustomersCache[id];
       if (customer) {
-        // পূর্বের নিরাপত্তা চেক
+        // সেলস ইউজারের জন্য পুনরায় চেক (ডাবল সুরক্ষা)
         if (currentUser.role === 'sales') {
           const isAssigned = customer.salespersons && customer.salespersons.includes(currentUser.uid);
           if (!isAssigned) {
@@ -1820,14 +1839,14 @@ custInput.addEventListener('input', () => {
         document.getElementById('custLine').textContent = customer.line;
         document.getElementById('customerInfo').style.display = 'block';
         window.selectedCustomer = customer;
-        custInput.value = customer.custCode;  // ইনপুটে পুরো কোড বসাও
+        custInput.value = customer.custCode;
         custDropdown.style.display = 'none';
       }
     });
   });
 });
 
-// ক্লিক আউটসাইডে ড্রপডাউন লুকাও
+// ড্রপডাউন বাইরে ক্লিক করলে হাইড
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#orderCustomerCode') && !e.target.closest('#customerDropdown')) {
     custDropdown.style.display = 'none';
@@ -1838,7 +1857,7 @@ document.addEventListener('click', (e) => {
 const itemSearchInput = document.getElementById('orderItemSearch');
 const itemDropdown = document.createElement('div');
 itemDropdown.id = 'itemSearchDropdown';
-itemDropdown.style.cssText = 'position:absolute; background:#fff; border:1px solid #e2e8f0; border-radius:4px; max-height:200px; overflow-y:auto; z-index:50; display:none;';
+itemDropdown.style.cssText = 'position:absolute; top:100%; left:0; width:100%; background:#fff; border:1px solid #e2e8f0; border-radius:0 0 4px 4px; max-height:200px; overflow-y:auto; z-index:50; display:none;';
 document.getElementById('orderItemSearch').parentElement.style.position = 'relative';
 document.getElementById('orderItemSearch').parentElement.appendChild(itemDropdown);
 
