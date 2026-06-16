@@ -759,7 +759,8 @@ async function loadItemFormUnits() {
       const unitSnap = await get(ref(database, 'units/' + selectedUnitId));
       const unitData = unitSnap.val();
       if (unitData && unitData.salesLines) {
-        unitData.salesLines.forEach(line => {
+        const uniqueLines = [...new Set(unitData.salesLines)]; // ✅ ডুপ্লিকেট বাদ
+        uniqueLines.forEach(line => {
           const opt = document.createElement('option');
           opt.value = line;
           opt.textContent = line;
@@ -865,6 +866,14 @@ document.getElementById('btnSaveItem').addEventListener('click', async () => {
   if (!itemCode || !description || !uom || isNaN(distPrice) || !tradeCategory || !unitId || !line) {
     alert('সব আবশ্যক ঘর পূরণ করুন।');
     return;
+  }
+  // ডুপ্লিকেট আইটেম কোড চেক
+  if (allItemsCache) {
+    const duplicate = Object.values(allItemsCache).some(item => item.itemCode === itemCode);
+    if (duplicate) {
+      alert('এই আইটেম কোড ইতিমধ্যে আছে।');
+      return;
+    }
   }
 
   const freeDetails = tradeCategory === 'free' ? {
@@ -1023,6 +1032,7 @@ function attachItemActions(items) {
     btn.addEventListener('click', async (e) => {
       if (!confirm('আইটেমটি মুছে ফেলতে চান?')) return;
       const id = e.target.getAttribute('data-id');
+      console.log('Deleting item with id:', id);  // ✅ এই লাইনটি যোগ করো
       try {
         await remove(ref(database, 'items/' + id));
         alert('আইটেম ডিলিট করা হয়েছে।');
@@ -1755,36 +1765,73 @@ document.getElementById('btnSaveEditCustomer').addEventListener('click', async (
   } catch (err) { alert('আপডেট ব্যর্থ: ' + err.message); }
 });
 
-// কাস্টমার কোড অটো-লোড
-document.getElementById('orderCustomerCode').addEventListener('input', () => {
-  const code = document.getElementById('orderCustomerCode').value.trim();
-  if (!code || !allCustomersCache) {
-    document.getElementById('customerInfo').style.display = 'none';
+// কাস্টমার অটো-সাজেশন
+const custInput = document.getElementById('orderCustomerCode');
+const custDropdown = document.createElement('div');
+custDropdown.id = 'customerDropdown';
+custDropdown.style.cssText = 'position:absolute; background:#fff; border:1px solid #e2e8f0; border-radius:4px; max-height:200px; overflow-y:auto; z-index:50; display:none; width:100%;';
+custInput.parentElement.style.position = 'relative';
+custInput.parentElement.appendChild(custDropdown);
+
+custInput.addEventListener('input', () => {
+  const term = custInput.value.trim().toLowerCase();
+  if (!term || !allCustomersCache) {
+    custDropdown.style.display = 'none';
     return;
   }
-  const customer = Object.values(allCustomersCache).find(c => c.custCode === code);
-  if (!customer) {
-    document.getElementById('customerInfo').style.display = 'none';
-    return;  // পুরো কোড মেলেনি – কিছু দেখাবে না (বা মেসেজ দিতে পারো)
+  const matches = Object.entries(allCustomersCache).filter(([id, cust]) =>
+    String(cust.custCode).toLowerCase().includes(term) ||
+    (cust.custName && cust.custName.toLowerCase().includes(term))
+  );
+  if (matches.length === 0) {
+    custDropdown.innerHTML = '<div style="padding:8px;">কোনো কাস্টমার পাওয়া যায়নি</div>';
+    custDropdown.style.display = 'block';
+    return;
   }
-  // Role-based check
-  if (currentUser.role === 'sales') {
-    const isAssigned = customer.salespersons && customer.salespersons.includes(currentUser.uid);
-    if (!isAssigned) {
-      alert('আপনি এই কাস্টমারকে অ্যাক্সেস করতে পারবেন না।');
-      document.getElementById('customerInfo').style.display = 'none';
-      return;
-    }
+  custDropdown.innerHTML = matches.map(([id, cust]) =>
+    `<div data-id="${id}" class="cust-search-item" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0;">
+      ${cust.custCode} - ${cust.custName}
+    </div>`
+  ).join('');
+  custDropdown.style.display = 'block';
+
+  document.querySelectorAll('.cust-search-item').forEach(elem => {
+    elem.addEventListener('click', () => {
+      const id = elem.getAttribute('data-id');
+      const customer = allCustomersCache[id];
+      if (customer) {
+        // পূর্বের নিরাপত্তা চেক
+        if (currentUser.role === 'sales') {
+          const isAssigned = customer.salespersons && customer.salespersons.includes(currentUser.uid);
+          if (!isAssigned) {
+            alert('আপনি এই কাস্টমারকে অ্যাক্সেস করতে পারবেন না।');
+            custInput.value = '';
+            custDropdown.style.display = 'none';
+            document.getElementById('customerInfo').style.display = 'none';
+            return;
+          }
+        }
+        // তথ্য দেখাও
+        document.getElementById('custName').textContent = customer.custName;
+        document.getElementById('custWarehouse').textContent = customer.warehouse;
+        document.getElementById('custRegion').textContent = customer.region;
+        document.getElementById('custArea').textContent = customer.area;
+        document.getElementById('custUnit').textContent = customer.unitShortCode || '';
+        document.getElementById('custLine').textContent = customer.line;
+        document.getElementById('customerInfo').style.display = 'block';
+        window.selectedCustomer = customer;
+        custInput.value = customer.custCode;  // ইনপুটে পুরো কোড বসাও
+        custDropdown.style.display = 'none';
+      }
+    });
+  });
+});
+
+// ক্লিক আউটসাইডে ড্রপডাউন লুকাও
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#orderCustomerCode') && !e.target.closest('#customerDropdown')) {
+    custDropdown.style.display = 'none';
   }
-  // তথ্য দেখাও
-  document.getElementById('custName').textContent = customer.custName;
-  document.getElementById('custWarehouse').textContent = customer.warehouse;
-  document.getElementById('custRegion').textContent = customer.region;
-  document.getElementById('custArea').textContent = customer.area;
-  document.getElementById('custUnit').textContent = customer.unitShortCode || '';
-  document.getElementById('custLine').textContent = customer.line;
-  document.getElementById('customerInfo').style.display = 'block';
-  window.selectedCustomer = customer;
 });
 
 // আইটেম সার্চ অটোকমপ্লিট
@@ -1801,7 +1848,18 @@ itemSearchInput.addEventListener('input', () => {
     itemDropdown.style.display = 'none';
     return;
   }
-  const matches = Object.entries(allItemsCache).filter(([id, item]) =>
+  let filteredItems = allItemsCache;
+  // যদি কাস্টমার নির্বাচিত থাকে, তার লাইনের আইটেম ফিল্টার
+  if (window.selectedCustomer && window.selectedCustomer.line) {
+    filteredItems = {};
+    Object.entries(allItemsCache).forEach(([id, item]) => {
+      if (item.line === window.selectedCustomer.line) {
+        filteredItems[id] = item;
+      }
+    });
+  }
+
+  const matches = Object.entries(filteredItems).filter(([id, item]) =>
     String(item.itemCode).toLowerCase().includes(term) ||
     (item.description && item.description.toLowerCase().includes(term))
   );
