@@ -192,6 +192,6 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
     }
     .main-app-container {
         max-width: 1200px;    /* 1200px-এর বেশি হবে না */
-        margin: 0 auto;       /* কেন্দ্রে থাকবে (আছে আগেই) */
+        margin: 0 auto;       
     }
 }
