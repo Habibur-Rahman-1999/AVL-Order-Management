@@ -2067,30 +2067,116 @@ document.getElementById('btnSubmitOrder').addEventListener('click', async () => 
   }
 });
 
-// ========== MY ORDERS ==========
 function loadMyOrders() {
   const container = document.getElementById('myOrdersContainer');
   const ordersRef = ref(database, 'orders');
   const searchInput = document.getElementById('orderSearchInput');
   const exportBtn = document.getElementById('btnExportOrders');
+  const dateFromInput = document.getElementById('orderDateFrom');
+  const dateToInput = document.getElementById('orderDateTo');
+  const filterBtn = document.getElementById('btnFilterByDate');
+  const clearBtn = document.getElementById('btnClearDateFilter');
 
+  // অর্ডার ডাটা লোড
   onValue(ordersRef, (snapshot) => {
     allOrdersCache = snapshot.val() || {};
-    const term = searchInput.value.trim().toLowerCase();
-    const filtered = filterOrders(term);
-    renderOrdersTable(filtered);
+    applyOrderFilters();
   });
 
-  searchInput.addEventListener('input', () => {
-    const term = searchInput.value.trim().toLowerCase();
-    const filtered = filterOrders(term);
-    renderOrdersTable(filtered);
-  });
+  function applyOrderFilters() {
+    let filtered = allOrdersCache;
 
-  exportBtn.addEventListener('click', () => {
-    exportOrdersToCSV(allOrdersCache);
+    // রোল বেসড (সেলস শুধু নিজের)
+    if (currentUser.role === 'sales') {
+      const temp = {};
+      Object.entries(filtered).forEach(([id, order]) => {
+        if (order.createdBy === currentUser.uid) temp[id] = order;
+      });
+      filtered = temp;
+    }
+
+    // তারিখ ফিল্টার
+    const fromDate = dateFromInput.value; // YYYY-MM-DD
+    const toDate = dateToInput.value;
+    if (fromDate || toDate) {
+      const temp = {};
+      Object.entries(filtered).forEach(([id, order]) => {
+        const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+        if ((!fromDate || orderDate >= fromDate) && (!toDate || orderDate <= toDate)) {
+          temp[id] = order;
+        }
+      });
+      filtered = temp;
+    }
+
+    // সার্চ ফিল্টার (কোড বা অর্ডার আইডি)
+    const term = searchInput.value.trim().toLowerCase();
+    if (term) {
+      const temp = {};
+      Object.entries(filtered).forEach(([id, order]) => {
+        if (String(order.customerCode).toLowerCase().includes(term) || String(id).toLowerCase().includes(term)) {
+          temp[id] = order;
+        }
+      });
+      filtered = temp;
+    }
+
+    renderOrdersTable(filtered);
+  }
+
+  // ইভেন্ট লিসেনার
+  searchInput.addEventListener('input', applyOrderFilters);
+  exportBtn.addEventListener('click', () => exportOrdersToCSV(allOrdersCache));
+  filterBtn.addEventListener('click', applyOrderFilters);
+  clearBtn.addEventListener('click', () => {
+    dateFromInput.value = '';
+    dateToInput.value = '';
+    applyOrderFilters();
   });
 }
+
+function showOrderDetails(orderId, order) {
+  const modal = document.getElementById('orderDetailsModal');
+  const content = document.getElementById('orderDetailsContent');
+
+  let itemsHtml = '<table class="approval-table" style="width:100%;">';
+  itemsHtml += '<thead><tr><th>আইটেম কোড</th><th>বিবরণ</th><th>পরিমাণ</th><th>একক দর</th><th>মোট</th></tr></thead><tbody>';
+
+  if (order.items && order.items.length > 0) {
+    order.items.forEach(item => {
+      const itemTotal = item.quantity * item.price;
+      itemsHtml += `
+        <tr>
+          <td>${item.itemCode}</td>
+          <td>${item.description || ''}</td>
+          <td>${item.quantity}</td>
+          <td>${item.price?.toFixed(2)}</td>
+          <td>${itemTotal.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  } else {
+    itemsHtml += '<tr><td colspan="5">কোনো আইটেম নেই</td></tr>';
+  }
+  itemsHtml += '</tbody></table>';
+
+  content.innerHTML = `
+    <p><strong>অর্ডার আইডি:</strong> ${orderId}</p>
+    <p><strong>কাস্টমার কোড:</strong> ${order.customerCode}</p>
+    <p><strong>কাস্টমার নাম:</strong> ${order.customerName}</p>
+    <p><strong>তারিখ:</strong> ${new Date(order.createdAt).toLocaleDateString('bn-BD')}</p>
+    <p><strong>সর্বমোট:</strong> ${order.total?.toFixed(2)}</p>
+    <h4>অর্ডারকৃত আইটেম:</h4>
+    ${itemsHtml}
+  `;
+
+  modal.style.display = 'flex';
+}
+
+// ক্লোজ বাটন
+document.getElementById('btnCloseOrderDetails').addEventListener('click', () => {
+  document.getElementById('orderDetailsModal').style.display = 'none';
+});
 
 function filterOrders(term) {
   let visible = allOrdersCache;
@@ -2136,8 +2222,9 @@ function renderOrdersTable(orders) {
 
   Object.entries(orders).forEach(([id, order]) => {
     const row = document.createElement('tr');
+    // অর্ডার আইডি ক্লিকেবল
     row.innerHTML = `
-      <td>${id}</td>
+      <td style="color:#1e3c72; cursor:pointer; text-decoration:underline;" class="order-id-click" data-order-id="${id}">${id}</td>
       <td>${order.customerCode}</td>
       <td>${order.customerName}</td>
       <td>${order.total?.toFixed(2)}</td>
@@ -2151,6 +2238,16 @@ function renderOrdersTable(orders) {
   tableWrapper.className = 'table-responsive';
   tableWrapper.appendChild(table);
   container.appendChild(tableWrapper);
+
+  // ক্লিক ইভেন্ট – অর্ডার বিবরণী দেখাও
+  document.querySelectorAll('.order-id-click').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      const orderId = e.target.getAttribute('data-order-id');
+      const order = orders[orderId]; // এখানে 'orders' হলো ফিল্টারড, কিন্তু global allOrdersCache থেকে নেওয়া ভালো
+      const fullOrder = allOrdersCache[orderId];
+      if (fullOrder) showOrderDetails(orderId, fullOrder);
+    });
+  });
 }
 
 function exportOrdersToCSV(orders) {

@@ -180,3 +180,8 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
 #myOrdersContainer .approval-table {
     min-width: 700px;
 }
+
+.order-id-click:hover {
+    color: #0f2027 !important;
+    text-decoration: none !important;
+}
