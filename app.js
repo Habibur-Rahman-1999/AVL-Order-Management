@@ -322,7 +322,16 @@ function switchSubView(viewId) {
   if (viewId === 'manageUnits') loadManageUnits();
   else if (viewId === 'userApprovals') loadUserManagement();
   else if (viewId === 'balanceReport') {
+    // কাস্টমার ক্যাশ না থাকলে প্রথমে লোড করো, তারপর ব্যালেন্স লোড
+    if (!allCustomersCache || Object.keys(allCustomersCache).length === 0) {
+      const custRef = ref(database, 'customers');
+      get(custRef).then(snapshot => {
+        allCustomersCache = snapshot.val() || {};
+        loadBalanceData();
+      });
+    } else {
       loadBalanceData();
+    }
   }
   else if (viewId === 'itemList') {
     loadItemFormUnits();
