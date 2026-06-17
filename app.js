@@ -164,7 +164,8 @@ document.getElementById('btnLogin').addEventListener('click', () => {
         name: userData.name,
         role: isAdmin ? 'admin' : (userData.role || 'sales'),
         status: userData.status,   // ✅ এখানে কমা দিন
-        salesLine: userData.salesLine || ''
+        salesLine: userData.salesLine || '',
+	enroll: userData.enroll || ''        // ✅ নতুন লাইন
       };
       toggleLoading('btnLogin', false, defaultHtml);
       showMainApp();
@@ -2111,7 +2112,7 @@ async function submitOrder() {
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: "ORDER_LOG",          // Apps Script চিনবে এই টাইপ দিয়ে
+        type: "ORDER_LOG",
         orderId: orderId,
         customerCode: customer.custCode,
         customerName: customer.custName,
@@ -2122,7 +2123,9 @@ async function submitOrder() {
         line: customer.line,
         items: draftItems,
         total: orderData.total,
-        createdBy: currentUser.uid,
+        createdByEnroll: currentUser.enroll || '',   // ✅
+        createdByName: currentUser.name || '',       // ✅
+        createdByEmail: currentUser.email || '',     // ✅
         createdAt: orderData.createdAt
       })
     }).catch(err => console.error('Sheet logging failed:', err));
