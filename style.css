@@ -185,3 +185,13 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
     color: #0f2027 !important;
     text-decoration: none !important;
 }
+
+/* ========== DESKTOP FULL-WIDTH IMPROVEMENT ========== */
+@media (min-width: 1200px) {
+    body {
+        padding: 20px 10px;  /* উপর-নিচ 20px, ডানে-বামে 10px */
+    }
+    .main-app-container {
+        max-width: 100%;     /* প্রায় পুরো প্রস্থ নেবে */
+    }
+}
