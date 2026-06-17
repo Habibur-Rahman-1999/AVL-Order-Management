@@ -2316,10 +2316,11 @@ function renderOrdersTable(orders) {
 
   const table = document.createElement('table');
   table.className = 'approval-table';
+  // হেডারে Action কলাম যোগ করো
   table.innerHTML = `
     <thead>
       <tr>
-        <th>অর্ডার আইডি</th><th>কাস্টমার কোড</th><th>কাস্টমার</th><th>মোট</th><th>তারিখ</th><th>ক্রেতা</th>
+        <th>অর্ডার আইডি</th><th>কাস্টমার কোড</th><th>কাস্টমার</th><th>মোট</th><th>তারিখ</th><th>ক্রেতা</th><th>অ্যাকশন</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -2328,7 +2329,15 @@ function renderOrdersTable(orders) {
 
   Object.entries(orders).forEach(([id, order]) => {
     const row = document.createElement('tr');
-    // অর্ডার আইডি ক্লিকেবল
+    // অর্ডার আইডি ক্লিকেবল (বিবরণ দেখতে)
+    let actionCell = '';
+    // ✅ শুধু অ্যাডমিন ও ম্যানেজার ডিলিট বাটন দেখবে
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+      actionCell = `<button class="btn-delete-order" data-order-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>`;
+    } else {
+      actionCell = '—';
+    }
+
     row.innerHTML = `
       <td style="color:#1e3c72; cursor:pointer; text-decoration:underline;" class="order-id-click" data-order-id="${id}">${id}</td>
       <td>${order.customerCode}</td>
@@ -2336,6 +2345,7 @@ function renderOrdersTable(orders) {
       <td>${order.total?.toFixed(2)}</td>
       <td>${new Date(order.createdAt).toLocaleDateString('bn-BD')}</td>
       <td>${order.createdByName || ''}</td>
+      <td>${actionCell}</td>
     `;
     tbody.appendChild(row);
   });
@@ -2345,13 +2355,28 @@ function renderOrdersTable(orders) {
   tableWrapper.appendChild(table);
   container.appendChild(tableWrapper);
 
-  // ক্লিক ইভেন্ট – অর্ডার বিবরণী দেখাও
+  // ক্লিক ইভেন্ট – অর্ডার বিবরণী দেখাও (আগের মতো)
   document.querySelectorAll('.order-id-click').forEach(cell => {
     cell.addEventListener('click', (e) => {
       const orderId = e.target.getAttribute('data-order-id');
-      const order = orders[orderId]; // এখানে 'orders' হলো ফিল্টারড, কিন্তু global allOrdersCache থেকে নেওয়া ভালো
+      const order = orders[orderId];
       const fullOrder = allOrdersCache[orderId];
       if (fullOrder) showOrderDetails(orderId, fullOrder);
+    });
+  });
+
+  // ✅ ডিলিট বাটনের ইভেন্ট
+  document.querySelectorAll('.btn-delete-order').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const orderId = e.target.getAttribute('data-order-id');
+      if (!confirm('এই অর্ডারটি মুছে ফেলতে চান?')) return;
+      try {
+        await remove(ref(database, 'orders/' + orderId));
+        alert('অর্ডার ডিলিট করা হয়েছে।');
+        // টেবিল রিফ্রেশ হবে onValue-এর মাধ্যমে
+      } catch (err) {
+        alert('ডিলিট ব্যর্থ: ' + err.message);
+      }
     });
   });
 }
