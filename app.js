@@ -2077,16 +2077,13 @@ function loadMyOrders() {
   const filterBtn = document.getElementById('btnFilterByDate');
   const clearBtn = document.getElementById('btnClearDateFilter');
 
-  // অর্ডার ডাটা লোড
-  onValue(ordersRef, (snapshot) => {
-    allOrdersCache = snapshot.val() || {};
-    applyOrderFilters();
-  });
+  // এই ফাংশনটি এখন গ্লোবালি অ্যাক্সেসযোগ্য
+  window.applyMyOrderFilters = function() {
+    if (!allOrdersCache) return;
 
-  function applyOrderFilters() {
-    let filtered = allOrdersCache;
+    let filtered = { ...allOrdersCache };
 
-    // রোল বেসড (সেলস শুধু নিজের)
+    // রোল বেসড ফিল্টার (সেলস শুধু নিজের)
     if (currentUser.role === 'sales') {
       const temp = {};
       Object.entries(filtered).forEach(([id, order]) => {
@@ -2096,7 +2093,7 @@ function loadMyOrders() {
     }
 
     // তারিখ ফিল্টার
-    const fromDate = dateFromInput.value; // YYYY-MM-DD
+    const fromDate = dateFromInput.value;
     const toDate = dateToInput.value;
     if (fromDate || toDate) {
       const temp = {};
@@ -2109,7 +2106,7 @@ function loadMyOrders() {
       filtered = temp;
     }
 
-    // সার্চ ফিল্টার (কোড বা অর্ডার আইডি)
+    // সার্চ ফিল্টার
     const term = searchInput.value.trim().toLowerCase();
     if (term) {
       const temp = {};
@@ -2122,16 +2119,41 @@ function loadMyOrders() {
     }
 
     renderOrdersTable(filtered);
-  }
+  };
 
-  // ইভেন্ট লিসেনার
-  searchInput.addEventListener('input', applyOrderFilters);
-  exportBtn.addEventListener('click', () => exportOrdersToCSV(allOrdersCache));
-  filterBtn.addEventListener('click', applyOrderFilters);
+  // রিয়েলটাইম ডাটা লোড এবং প্রাথমিক টেবিল রেন্ডার
+  onValue(ordersRef, (snapshot) => {
+    allOrdersCache = snapshot.val() || {};
+    window.applyMyOrderFilters();
+  });
+
+  // সার্চ ইনপুট পরিবর্তন হলে ফিল্টার আপডেট
+  searchInput.addEventListener('input', () => {
+    window.applyMyOrderFilters();
+  });
+
+  // এক্সপোর্ট (সকল অর্ডার, বর্তমান ফিল্টার নয়) – চাইলে ফিল্টারড এক্সপোর্ট করতে পারেন
+  exportBtn.addEventListener('click', () => {
+    exportOrdersToCSV(allOrdersCache);
+  });
+
+  // ফিল্টার বাটন – মোবাইল ও ডেস্কটপ উভয়ের জন্য
+  filterBtn.addEventListener('click', (e) => {
+    e.preventDefault();  // কোনো default আচরণ রোধ
+    window.applyMyOrderFilters();
+  });
+
+  // ক্লিয়ার বাটন
   clearBtn.addEventListener('click', () => {
     dateFromInput.value = '';
     dateToInput.value = '';
-    applyOrderFilters();
+    window.applyMyOrderFilters();
+  });
+
+  // (ঐচ্ছিক) মোবাইলের জন্য অতিরিক্ত touchend ইভেন্ট, কিন্তু click-ই যথেষ্ট
+  filterBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    window.applyMyOrderFilters();
   });
 }
 
