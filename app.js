@@ -2361,26 +2361,30 @@ function loadBalanceData() {
   const searchInput = document.getElementById('balanceSearchInput');
   const exportBtn = document.getElementById('btnExportBalance');
 
-  // Firebase থেকে ডাটা লোড
+  // Firebase থেকে ডাটা লোড (এখন অবজেক্ট আসবে)
   onValue(balanceRef, (snapshot) => {
-    allBalanceDataCache = snapshot.val() || [];
+    allBalanceDataCache = snapshot.val() || {}; // { "25574": {...}, "12345": {...} }
     applyBalanceFilter();
   });
 
   function applyBalanceFilter() {
+    // অবজেক্ট থেকে অ্যারে তৈরি (filter ও table-এর সুবিধার্থে)
     let data = allBalanceDataCache;
-    if (!Array.isArray(data)) data = Object.values(data); // যদি অবজেক্ট হয়
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      data = Object.values(data);
+    } else if (!Array.isArray(data)) {
+      data = [];
+    }
 
     // রোল-বেসড ফিল্টার: সেলস শুধু নিজের অ্যাসাইন করা কাস্টমার
     if (currentUser.role === 'sales') {
       if (allCustomersCache && Object.keys(allCustomersCache).length > 0) {
         data = data.filter(row => {
-          // String() দিয়ে টাইপ কনভার্ট করে তুলনা
           const cust = Object.values(allCustomersCache).find(c => String(c.custCode) === String(row['Customer Code']));
           return cust && cust.salespersons && cust.salespersons.includes(currentUser.uid);
         });
       } else {
-        data = []; // কাস্টমার ডাটা না থাকলে কিছু দেখাবে না
+        data = [];
       }
     }
 
@@ -2399,7 +2403,14 @@ function loadBalanceData() {
 
   // ইভেন্ট লিসেনার
   searchInput.addEventListener('input', applyBalanceFilter);
-  exportBtn.addEventListener('click', () => exportBalanceToCSV(allBalanceDataCache));
+  exportBtn.addEventListener('click', () => {
+    // export করতে চাইলে সবগুলো row (filter ছাড়া) দেওয়া ভালো
+    let exportData = allBalanceDataCache;
+    if (typeof exportData === 'object' && !Array.isArray(exportData)) {
+      exportData = Object.values(exportData);
+    }
+    exportBalanceToCSV(exportData);
+  });
 }
 
 function renderBalanceTable(data) {
@@ -2489,16 +2500,43 @@ document.getElementById('balanceFileInput').addEventListener('change', (e) => {
       const worksheet = workbook.Sheets[firstSheet];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-      // Firebase-এ overwrite করে সেভ
+      // Firebase-এ পূর্বের ডাটা প্রথমে পড়ি
       const balanceRef = ref(database, 'balanceData');
-      set(balanceRef, jsonData)
-        .then(() => {
-          alert('ফাইল সফলভাবে আপলোড হয়েছে।');
-          // টেবিল রিফ্রেশ হবে onValue-এর মাধ্যমে
-        })
-        .catch(err => {
-          alert('আপলোড ব্যর্থ: ' + err.message);
+      get(balanceRef).then(existingSnap => {
+        // বর্তমানে সংরক্ষিত ডাটা (অবজেক্ট হিসেবে, ফাঁকা হলে {} )
+        const existingData = existingSnap.val() || {};
+        // যদি আগে অ্যারে আকারে থাকত, তাহলে সেটাকে আমরা নতুন অবজেক্টে কনভার্ট করব
+        const existingObject = Array.isArray(existingData)
+          ? existingData.reduce((acc, row) => {
+              if (row['Customer Code']) {
+                acc[String(row['Customer Code'])] = row;
+              }
+              return acc;
+            }, {})
+          : existingData;
+
+        // নতুন আপলোডেড ডাটা (jsonData অ্যারে) থেকে কী-অবজেক্ট তৈরি
+        const newObject = {};
+        jsonData.forEach(row => {
+          const code = String(row['Customer Code']);
+          if (code) {
+            newObject[code] = row;
+          }
         });
+
+        // মার্জ: পুরানো ডাটার উপর নতুন ডাটা overwrite করে আপডেট
+        const merged = { ...existingObject, ...newObject };
+
+        // Firebase-এ merged অবজেক্ট সেভ
+        return set(balanceRef, merged);
+      })
+      .then(() => {
+        alert('ফাইল সফলভাবে আপলোড হয়েছে।');
+        // টেবিল রিফ্রেশ হবে onValue-এর মাধ্যমে
+      })
+      .catch(err => {
+        alert('আপলোড ব্যর্থ: ' + err.message);
+      });
     } catch (error) {
       alert('এক্সেল ফাইল পার্স করতে সমস্যা: ' + error.message);
     }
@@ -2507,8 +2545,8 @@ document.getElementById('balanceFileInput').addEventListener('change', (e) => {
 });
 
 function getCustomerBalance(custCode) {
-  if (!allBalanceDataCache || !Array.isArray(allBalanceDataCache)) return null;
-  const row = allBalanceDataCache.find(r => String(r['Customer Code']) === String(custCode));
+  if (!allBalanceDataCache || typeof allBalanceDataCache !== 'object') return null;
+  const row = allBalanceDataCache[String(custCode)];
   if (row && row['Usable Balance'] !== undefined) {
     return parseFloat(row['Usable Balance']) || 0;
   }
