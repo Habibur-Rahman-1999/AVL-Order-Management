@@ -2101,7 +2101,32 @@ async function submitOrder() {
 
   try {
     const ordersRef = ref(database, 'orders');
-    await push(ordersRef, orderData);
+    const newOrderRef = push(ordersRef);      // নতুন রেফারেন্স তৈরি
+    const orderId = newOrderRef.key;          // Firebase auto-generated ID
+    await set(newOrderRef, orderData);        // ডাটা সেভ
+
+    // ---------- Google Sheet-এ অর্ডার পাঠানো ----------
+    fetch(appsScriptURL, {   // OTP-র জন্য যে URL আছে (তোমার appsScriptURL ভ্যারিয়েবল), সেটাই
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "ORDER_LOG",          // Apps Script চিনবে এই টাইপ দিয়ে
+        orderId: orderId,
+        customerCode: customer.custCode,
+        customerName: customer.custName,
+        warehouse: customer.warehouse,
+        region: customer.region,
+        area: customer.area,
+        unit: customer.unitShortCode || '',
+        line: customer.line,
+        items: draftItems,
+        total: orderData.total,
+        createdBy: currentUser.uid,
+        createdAt: orderData.createdAt
+      })
+    }).catch(err => console.error('Sheet logging failed:', err));
+
     alert('অর্ডার সাবমিট হয়েছে।');
     draftItems = [];
     renderDraftTable();
