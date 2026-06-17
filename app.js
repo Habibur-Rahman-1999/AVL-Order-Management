@@ -379,13 +379,6 @@ function switchSubView(viewId) {
         allCustomersCache = snapshot.val() || {};
       });
     }
-    // ✅ ব্যালেন্স ডাটা লোড (যদি না থাকে)
-    if (!allBalanceDataCache || (Array.isArray(allBalanceDataCache) && allBalanceDataCache.length === 0)) {
-      const balanceRef = ref(database, 'balanceData');
-      onValue(balanceRef, (snapshot) => {
-        allBalanceDataCache = snapshot.val() || [];
-      });
-    }
     draftItems = [];
     renderDraftTable();
   }
@@ -1857,9 +1850,7 @@ custInput.addEventListener('input', () => {
         document.getElementById('custArea').textContent = customer.area;
         document.getElementById('custUnit').textContent = customer.unitShortCode || '';
         document.getElementById('custLine').textContent = customer.line;
-	// ব্যালেন্স দেখাও
-	const balance = getCustomerBalance(customer.custCode);
-	document.getElementById('custBalance').textContent = balance !== null ? balance : 'তথ্য নেই';
+	displayCustomerBalance(customer.custCode);  // ✅ নতুন লাইন
         document.getElementById('customerInfo').style.display = 'block';
         window.selectedCustomer = customer;
         custInput.value = customer.custCode;
@@ -2531,3 +2522,23 @@ window.addEventListener('click', (e) => {
     modal.style.display = 'none';
   }
 });
+
+function displayCustomerBalance(customerCode) {
+  // ক্যাশে ব্যালেন্স ডাটা থাকলে সরাসরি দেখাও
+  if (allBalanceDataCache && Array.isArray(allBalanceDataCache) && allBalanceDataCache.length > 0) {
+    const balance = getCustomerBalance(customerCode);
+    document.getElementById('custBalance').textContent = balance !== null ? balance : 'তথ্য নেই';
+  } else {
+    // ক্যাশ ফাঁকা – লোডিং দেখাও এবং Firebase থেকে নিয়ে আসো
+    document.getElementById('custBalance').textContent = 'লোড হচ্ছে...';
+    const balanceRef = ref(database, 'balanceData');
+    get(balanceRef).then(snapshot => {
+      allBalanceDataCache = snapshot.val() || [];
+      const balance = getCustomerBalance(customerCode);
+      document.getElementById('custBalance').textContent = balance !== null ? balance : 'তথ্য নেই';
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('custBalance').textContent = 'তথ্য নেই';
+    });
+  }
+}
