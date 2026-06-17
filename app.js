@@ -2363,17 +2363,26 @@ function loadBalanceData() {
 
   // Firebase থেকে ডাটা লোড (এখন অবজেক্ট আসবে)
   onValue(balanceRef, (snapshot) => {
-    allBalanceDataCache = snapshot.val() || {}; // { "25574": {...}, "12345": {...} }
+    allBalanceDataCache = snapshot.val() || {};
     applyBalanceFilter();
   });
 
   function applyBalanceFilter() {
-    // অবজেক্ট থেকে অ্যারে তৈরি (filter ও table-এর সুবিধার্থে)
     let data = allBalanceDataCache;
     if (typeof data === 'object' && !Array.isArray(data)) {
       data = Object.values(data);
     } else if (!Array.isArray(data)) {
       data = [];
+    }
+
+    // ✅ শুধু কাস্টমার লিস্টে থাকা গ্রাহকদের ডাটা রাখো (সবার জন্য)
+    if (allCustomersCache && Object.keys(allCustomersCache).length > 0) {
+      data = data.filter(row => {
+        const custCode = String(row['Customer Code']);
+        return Object.values(allCustomersCache).some(cust => String(cust.custCode) === custCode);
+      });
+    } else {
+      data = []; // কাস্টমার লিস্ট না থাকলে কিছু দেখাবে না
     }
 
     // রোল-বেসড ফিল্টার: সেলস শুধু নিজের অ্যাসাইন করা কাস্টমার
@@ -2404,7 +2413,6 @@ function loadBalanceData() {
   // ইভেন্ট লিসেনার
   searchInput.addEventListener('input', applyBalanceFilter);
   exportBtn.addEventListener('click', () => {
-    // export করতে চাইলে সবগুলো row (filter ছাড়া) দেওয়া ভালো
     let exportData = allBalanceDataCache;
     if (typeof exportData === 'object' && !Array.isArray(exportData)) {
       exportData = Object.values(exportData);
@@ -2412,7 +2420,6 @@ function loadBalanceData() {
     exportBalanceToCSV(exportData);
   });
 }
-
 function renderBalanceTable(data) {
   const container = document.getElementById('balanceTableContainer');
   container.innerHTML = '';
