@@ -1917,7 +1917,7 @@ itemSearchInput.addEventListener('input', () => {
         }
         document.getElementById('tradeOfferInfo').textContent = tradeText;
         window.selectedItem = selectedItem;
-        document.getElementById('itemQuantity').value = 1;
+        document.getElementById('itemQuantity').value = '';
         updateItemTotal(); // মোট মূল্য আপডেট
         document.getElementById('itemDetails').style.display = 'block';
         itemSearchInput.value = selectedItem.itemCode; // সিলেক্টেড আইটেম কোড দেখাও
@@ -1929,7 +1929,7 @@ itemSearchInput.addEventListener('input', () => {
 
 // আইটেমের মোট মূল্য আপডেট
 function updateItemTotal() {
-  const qty = parseInt(document.getElementById('itemQuantity').value) || 1;
+  const qty = parseInt(document.getElementById('itemQuantity').value) || 0;
   const price = parseFloat(document.getElementById('itemPrice').textContent) || 0;
   document.getElementById('itemTotalValue').textContent = (qty * price).toFixed(2);
 }
@@ -1950,27 +1950,47 @@ function renderDraftTable() {
     const itemTotal = item.quantity * item.price;
     total += itemTotal;
     const row = document.createElement('tr');
+    row.id = `draft-row-${index}`;  // ✅ id যোগ করো
     row.innerHTML = `
       <td>${item.itemCode}</td>
       <td>${item.description}</td>
-      <td><input type="number" value="${item.quantity}" min="1" class="draft-qty" data-index="${index}" style="width:80px;"></td>
+      <td><input type="number" value="${item.quantity}" min="0" class="draft-qty" data-index="${index}" style="width:80px; padding:5px; border:1px solid #e2e8f0; border-radius:4px;"></td>
       <td>${item.price}</td>
-      <td>${itemTotal.toFixed(2)}</td>
+      <td class="draft-item-total">${itemTotal.toFixed(2)}</td>
       <td><button class="btn-delete-draft" data-index="${index}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">বাদ দিন</button></td>
     `;
     tbody.appendChild(row);
   });
   document.getElementById('draftTotal').textContent = total.toFixed(2);
 
-  // Add event listeners for quantity change
+  // ✅ নতুন ইনপুট ইভেন্ট (পুরো টেবিল রিরেন্ডার নয়, কেবল মোট আপডেট)
   document.querySelectorAll('.draft-qty').forEach(input => {
     input.addEventListener('input', (e) => {
       const index = parseInt(e.target.getAttribute('data-index'));
-      const newQty = parseInt(e.target.value) || 1;
+      const rawValue = e.target.value;
+      let newQty = parseInt(rawValue);
+      if (isNaN(newQty) || newQty < 0) newQty = 0;
+      
       draftItems[index].quantity = newQty;
-      renderDraftTable();
+
+      // শুধু এই সারির মোট কলাম আপডেট করো
+      const row = document.getElementById(`draft-row-${index}`);
+      if (row) {
+        const totalCell = row.querySelector('.draft-item-total');
+        if (totalCell) {
+          const item = draftItems[index];
+          const itemTotal = item.quantity * item.price;
+          totalCell.textContent = itemTotal.toFixed(2);
+        }
+      }
+
+      // সর্বমোট আপডেট
+      const total = draftItems.reduce((sum, di) => sum + di.quantity * di.price, 0);
+      document.getElementById('draftTotal').textContent = total.toFixed(2);
     });
   });
+
+  // ✅ বাদ দিন বাটনের ইভেন্ট (আগের মতোই, পুরো টেবিল রিরেন্ডার)
   document.querySelectorAll('.btn-delete-draft').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const index = parseInt(e.target.getAttribute('data-index'));
@@ -1985,7 +2005,12 @@ document.getElementById('btnAddToDraft').addEventListener('click', () => {
     alert('প্রথমে একটি আইটেম খুঁজুন।');
     return;
   }
-  const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
+  const qtyInput = document.getElementById('itemQuantity');
+  const quantity = parseInt(qtyInput.value) || 0;
+  if (quantity <= 0) {
+    alert('পরিমাণ প্রদান করুন।');
+    return;
+  }
   const item = window.selectedItem;
   const existing = draftItems.find(di => di.itemCode === item.itemCode);
   if (existing) {
@@ -1999,7 +2024,7 @@ document.getElementById('btnAddToDraft').addEventListener('click', () => {
     });
   }
   renderDraftTable();
-  document.getElementById('itemQuantity').value = 1;
+  qtyInput.value = '';   // ✅ ফাঁকা রাখো
 });
 
 document.getElementById('btnSubmitOrder').addEventListener('click', async () => {
