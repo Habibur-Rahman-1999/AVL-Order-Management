@@ -379,6 +379,13 @@ function switchSubView(viewId) {
         allCustomersCache = snapshot.val() || {};
       });
     }
+    // ✅ ব্যালেন্স ডাটা লোড (যদি না থাকে)
+    if (!allBalanceDataCache || (Array.isArray(allBalanceDataCache) && allBalanceDataCache.length === 0)) {
+      const balanceRef = ref(database, 'balanceData');
+      onValue(balanceRef, (snapshot) => {
+        allBalanceDataCache = snapshot.val() || [];
+      });
+    }
     draftItems = [];
     renderDraftTable();
   }
