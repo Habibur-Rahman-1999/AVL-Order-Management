@@ -2331,7 +2331,7 @@ function loadBalanceData() {
       if (allCustomersCache) {
         // কাস্টমার কোডের সাথে ইউজারের অ্যাসাইনমেন্ট মিলিয়ে ফিল্টার
         data = data.filter(row => {
-          const cust = Object.values(allCustomersCache).find(c => c.custCode === row['Customer Code']);
+	  const cust = Object.values(allCustomersCache).find(c => String(c.custCode) === String(row['Customer Code']));
           return cust && cust.salespersons && cust.salespersons.includes(currentUser.uid);
         });
       } else {
