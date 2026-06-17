@@ -2246,7 +2246,7 @@ function showOrderDetails(orderId, order) {
   const content = document.getElementById('orderDetailsContent');
 
   let itemsHtml = '<table class="approval-table" style="width:100%;">';
-  itemsHtml += '<thead><tr><th>আইটেম কোড</th><th>বিবরণ</th><th>পরিমাণ</th><th>একক দর</th><th>মোট</th></tr></thead><tbody>';
+  itemsHtml += '<thead><tr><th>আইটেম কোড</th><th>বিবরণ</th><th>পরিমাণ</th><th>Placed Qty</th><th>একক দর</th><th>মোট</th></tr></thead><tbody>';
 
   if (order.items && order.items.length > 0) {
     order.items.forEach(item => {
@@ -2256,13 +2256,14 @@ function showOrderDetails(orderId, order) {
           <td>${item.itemCode}</td>
           <td>${item.description || ''}</td>
           <td>${item.quantity}</td>
+          <td>${item.placedQuantity !== undefined ? item.placedQuantity : '—'}</td>
           <td>${item.price?.toFixed(2)}</td>
           <td>${itemTotal.toFixed(2)}</td>
         </tr>
       `;
     });
   } else {
-    itemsHtml += '<tr><td colspan="5">কোনো আইটেম নেই</td></tr>';
+    itemsHtml += '<tr><td colspan="6">কোনো আইটেম নেই</td></tr>';
   }
   itemsHtml += '</tbody></table>';
 
@@ -2316,11 +2317,11 @@ function renderOrdersTable(orders) {
 
   const table = document.createElement('table');
   table.className = 'approval-table';
-  // হেডারে Action কলাম যোগ করো
+  // হেডারে Status কলাম যোগ করো (Action আগে থেকেই আছে)
   table.innerHTML = `
     <thead>
       <tr>
-        <th>অর্ডার আইডি</th><th>কাস্টমার কোড</th><th>কাস্টমার</th><th>মোট</th><th>তারিখ</th><th>ক্রেতা</th><th>অ্যাকশন</th>
+        <th>অর্ডার আইডি</th><th>কাস্টমার কোড</th><th>কাস্টমার</th><th>মোট</th><th>তারিখ</th><th>ক্রেতা</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -2329,9 +2330,14 @@ function renderOrdersTable(orders) {
 
   Object.entries(orders).forEach(([id, order]) => {
     const row = document.createElement('tr');
-    // অর্ডার আইডি ক্লিকেবল (বিবরণ দেখতে)
+    
+    // স্ট্যাটাস ও অর্ডার নম্বর নির্ধারণ
+    const orderStatus = order.status || 'Pending';
+    const orderNumber = order.orderNumber || '';
+    const statusDisplay = orderStatus === 'Order Placed' ? `Order Placed (${orderNumber})` : 'Pending';
+
+    // অ্যাকশন বাটন (Delete বা —)
     let actionCell = '';
-    // ✅ শুধু অ্যাডমিন ও ম্যানেজার ডিলিট বাটন দেখবে
     if (currentUser.role === 'admin' || currentUser.role === 'manager') {
       actionCell = `<button class="btn-delete-order" data-order-id="${id}" style="background:#dc2626; color:#fff; border:none; padding:4px 10px; border-radius:4px;">Delete</button>`;
     } else {
@@ -2345,6 +2351,7 @@ function renderOrdersTable(orders) {
       <td>${order.total?.toFixed(2)}</td>
       <td>${new Date(order.createdAt).toLocaleDateString('bn-BD')}</td>
       <td>${order.createdByName || ''}</td>
+      <td>${statusDisplay}</td>
       <td>${actionCell}</td>
     `;
     tbody.appendChild(row);
@@ -2365,7 +2372,7 @@ function renderOrdersTable(orders) {
     });
   });
 
-  // ✅ ডিলিট বাটনের ইভেন্ট
+  // ডিলিট বাটনের ইভেন্ট
   document.querySelectorAll('.btn-delete-order').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const orderId = e.target.getAttribute('data-order-id');
