@@ -186,7 +186,7 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
     text-decoration: none !important;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1400px) {
     body {
         padding: 20px 10px;
     }
