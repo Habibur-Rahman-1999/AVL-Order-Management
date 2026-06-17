@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -148,6 +149,7 @@
                 <li><a data-view="customerList">Customer List</a></li>
                 <li><a data-view="itemList">Item List</a></li>
                 <li><a data-view="myOrders">My Orders</a></li>
+                <li><a data-view="balanceReport">Balance Report</a></li>
                 <li><a data-view="resetPassword">Reset Password</a></li>
                 <li id="adminApprovalsMenu" style="display:none;"><a data-view="userApprovals">User Approvals</a></li>
                 <li id="adminManageUnitsMenu" style="display:none;"><a data-view="manageUnits">Manage Units</a></li>
@@ -193,7 +195,30 @@
                     <p style="margin-top:5px;"><strong>মোট মূল্য:</strong> <span id="itemTotalValue">0</span></p>
                 </div>
                     
+                <!-- Balance Report View -->
+                <div id="balanceReport-view" class="sub-view">
+                    <h2>ব্যালেন্স রিপোর্ট</h2>
+    
+                    <!-- Upload Section -->
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; align-items:center;">
+                        <input type="file" id="balanceFileInput" accept=".xlsx, .xls" style="display:none;">
+                        <button id="btnChooseBalanceFile" class="btn btn-primary" style="width:auto; padding:10px 20px;">
+                            <i class="fas fa-upload"></i> এক্সেল ফাইল নির্বাচন করুন
+                        </button>
+                        <span id="balanceFileName" style="color:#64748b;">কোনো ফাইল নির্বাচিত হয়নি</span>
+                    </div>
 
+                    <!-- Search & Export Row -->
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                        <input type="text" id="balanceSearchInput" placeholder="কাস্টমার কোড/নাম/এলাকা দিয়ে সার্চ" style="flex:1; min-width:200px; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                        <button id="btnExportBalance" class="btn btn-primary" style="width:auto; padding:10px 20px;"><i class="fas fa-download"></i> এক্সপোর্ট (CSV)</button>
+                    </div>
+
+                    <!-- Balance Table Container -->
+                    <div id="balanceTableContainer">
+                        <p>কোনো ডাটা আপলোড করা হয়নি।</p>
+                    </div>
+                </div>
 
                 <h3>ড্রাফট অর্ডার</h3>
                 <div class="table-responsive">

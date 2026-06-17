@@ -32,6 +32,7 @@ let currentUser = { uid: null, email: null, name: null, role: 'user', status: nu
 let selectedSalespersons = [];
 let draftItems = [];
 let itemUnitListenerAttached = false;
+let allBalanceDataCache = {}; // balance data
 
 const loginView = document.getElementById('login-view');
 const registerView = document.getElementById('register-view');
@@ -320,6 +321,9 @@ function switchSubView(viewId) {
   if (target) target.classList.add('active');
   if (viewId === 'manageUnits') loadManageUnits();
   else if (viewId === 'userApprovals') loadUserManagement();
+  else if (viewId === 'balanceReport') {
+      loadBalanceData();
+  }
   else if (viewId === 'itemList') {
     loadItemFormUnits();
     loadItems();
@@ -2296,3 +2300,154 @@ function exportOrdersToCSV(orders) {
   link.download = `orders_export_${new Date().toISOString().slice(0,10)}.csv`;
   link.click();
 }
+
+function loadBalanceData() {
+  const container = document.getElementById('balanceTableContainer');
+  const balanceRef = ref(database, 'balanceData');
+  const searchInput = document.getElementById('balanceSearchInput');
+  const exportBtn = document.getElementById('btnExportBalance');
+
+  // Firebase থেকে ডাটা লোড
+  onValue(balanceRef, (snapshot) => {
+    allBalanceDataCache = snapshot.val() || [];
+    applyBalanceFilter();
+  });
+
+  function applyBalanceFilter() {
+    let data = allBalanceDataCache;
+    if (!Array.isArray(data)) data = Object.values(data); // যদি অবজেক্ট হয়
+
+    // রোল-বেসড ফিল্টার: সেলস শুধু নিজের অ্যাসাইন করা কাস্টমার
+    if (currentUser.role === 'sales') {
+      if (allCustomersCache) {
+        // কাস্টমার কোডের সাথে ইউজারের অ্যাসাইনমেন্ট মিলিয়ে ফিল্টার
+        data = data.filter(row => {
+          const cust = Object.values(allCustomersCache).find(c => c.custCode === row['Customer Code']);
+          return cust && cust.salespersons && cust.salespersons.includes(currentUser.uid);
+        });
+      } else {
+        data = []; // কাস্টমার ডাটা না থাকলে কিছু দেখাবে না
+      }
+    }
+
+    // সার্চ ফিল্টার
+    const term = searchInput.value.trim().toLowerCase();
+    if (term) {
+      data = data.filter(row => {
+        return (row['Customer Code'] && String(row['Customer Code']).toLowerCase().includes(term)) ||
+               (row['Customer Name'] && row['Customer Name'].toLowerCase().includes(term)) ||
+               (row['Area'] && row['Area'].toLowerCase().includes(term));
+      });
+    }
+
+    renderBalanceTable(data);
+  }
+
+  // ইভেন্ট লিসেনার
+  searchInput.addEventListener('input', applyBalanceFilter);
+  exportBtn.addEventListener('click', () => exportBalanceToCSV(allBalanceDataCache));
+}
+
+function renderBalanceTable(data) {
+  const container = document.getElementById('balanceTableContainer');
+  container.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<p class="empty-message">কোনো ডাটা পাওয়া যায়নি।</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'approval-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Customer Code</th><th>Customer Name</th><th>Region</th><th>Area</th><th>Point</th>
+        <th>Delivery</th><th>Collection</th><th>Pending</th><th>Usable Balance</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row['Customer Code'] || ''}</td>
+      <td>${row['Customer Name'] || ''}</td>
+      <td>${row['Region'] || ''}</td>
+      <td>${row['Area'] || ''}</td>
+      <td>${row['Point'] || ''}</td>
+      <td>${row['Delivery'] || ''}</td>
+      <td>${row['Collection'] || ''}</td>
+      <td>${row['Pending'] || ''}</td>
+      <td>${row['Usable Balance'] || ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'table-responsive';
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+}
+
+function exportBalanceToCSV(data) {
+  if (!data || data.length === 0) {
+    alert('এক্সপোর্ট করার মতো ডাটা নেই।');
+    return;
+  }
+  const headers = ['Customer Code','Customer Name','Region','Area','Point','Delivery','Collection','Pending','Usable Balance'];
+  const rows = [headers];
+  data.forEach(row => {
+    const r = headers.map(h => row[h] || '');
+    rows.push(r);
+  });
+  let csvContent = '';
+  rows.forEach(row => {
+    const escapedRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
+    csvContent += escapedRow.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `balance_export_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+// ========== BALANCE REPORT UPLOAD ==========
+document.getElementById('btnChooseBalanceFile').addEventListener('click', () => {
+  document.getElementById('balanceFileInput').click();
+});
+
+document.getElementById('balanceFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  document.getElementById('balanceFileName').textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const data = new Uint8Array(event.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheet];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      // Firebase-এ overwrite করে সেভ
+      const balanceRef = ref(database, 'balanceData');
+      set(balanceRef, jsonData)
+        .then(() => {
+          alert('ফাইল সফলভাবে আপলোড হয়েছে।');
+          // টেবিল রিফ্রেশ হবে onValue-এর মাধ্যমে
+        })
+        .catch(err => {
+          alert('আপলোড ব্যর্থ: ' + err.message);
+        });
+    } catch (error) {
+      alert('এক্সেল ফাইল পার্স করতে সমস্যা: ' + error.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
