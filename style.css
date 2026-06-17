@@ -186,12 +186,12 @@ body { min-height: 100vh; background: linear-gradient(135deg, #0f2027 0%, #203a4
     text-decoration: none !important;
 }
 
-/* ========== DESKTOP FULL-WIDTH IMPROVEMENT ========== */
 @media (min-width: 1200px) {
     body {
-        padding: 20px 10px;  /* উপর-নিচ 20px, ডানে-বামে 10px */
+        padding: 20px 10px;
     }
     .main-app-container {
-        max-width: 100%;     /* প্রায় পুরো প্রস্থ নেবে */
+        max-width: 1200px;    /* 1200px-এর বেশি হবে না */
+        margin: 0 auto;       /* কেন্দ্রে থাকবে (আছে আগেই) */
     }
 }
