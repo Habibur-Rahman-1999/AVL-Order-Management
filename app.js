@@ -2311,6 +2311,15 @@ function exportOrdersToCSV(orders) {
 }
 
 function loadBalanceData() {
+  // ✅ সেলস ইউজার হলে ইম্পোর্ট বাটন ও ফাইলের নাম লুকাও
+  if (currentUser.role === 'sales') {
+    document.getElementById('btnChooseBalanceFile').style.display = 'none';
+    document.getElementById('balanceFileName').style.display = 'none';
+  } else {
+    document.getElementById('btnChooseBalanceFile').style.display = 'inline-block';
+    document.getElementById('balanceFileName').style.display = 'inline';
+  }
+
   const container = document.getElementById('balanceTableContainer');
   const balanceRef = ref(database, 'balanceData');
   const searchInput = document.getElementById('balanceSearchInput');
@@ -2328,10 +2337,10 @@ function loadBalanceData() {
 
     // রোল-বেসড ফিল্টার: সেলস শুধু নিজের অ্যাসাইন করা কাস্টমার
     if (currentUser.role === 'sales') {
-      if (allCustomersCache) {
-        // কাস্টমার কোডের সাথে ইউজারের অ্যাসাইনমেন্ট মিলিয়ে ফিল্টার
+      if (allCustomersCache && Object.keys(allCustomersCache).length > 0) {
         data = data.filter(row => {
-	  const cust = Object.values(allCustomersCache).find(c => String(c.custCode) === String(row['Customer Code']));
+          // String() দিয়ে টাইপ কনভার্ট করে তুলনা
+          const cust = Object.values(allCustomersCache).find(c => String(c.custCode) === String(row['Customer Code']));
           return cust && cust.salespersons && cust.salespersons.includes(currentUser.uid);
         });
       } else {
