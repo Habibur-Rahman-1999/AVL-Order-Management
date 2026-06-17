@@ -2106,6 +2106,13 @@ async function submitOrder() {
     const orderId = newOrderRef.key;          // Firebase auto-generated ID
     await set(newOrderRef, orderData);        // ডাটা সেভ
 
+    // ---------- Google Sheet-এ অর্ডার পাঠানোর আগে কনসোলে ডাটা দেখাও ----------
+    console.log('Sending to sheet:', {
+      createdByEnroll: currentUser.enroll,
+      createdByName: currentUser.name,
+      createdByEmail: currentUser.email
+    });
+
     // ---------- Google Sheet-এ অর্ডার পাঠানো ----------
     fetch(appsScriptURL, {   // OTP-র জন্য যে URL আছে (তোমার appsScriptURL ভ্যারিয়েবল), সেটাই
       method: "POST",
@@ -2123,9 +2130,9 @@ async function submitOrder() {
         line: customer.line,
         items: draftItems,
         total: orderData.total,
-        createdByEnroll: currentUser.enroll || '',   // ✅
-        createdByName: currentUser.name || '',       // ✅
-        createdByEmail: currentUser.email || '',     // ✅
+        createdByEnroll: currentUser.enroll || currentUser.uid || '',   // ✅ enroll না থাকলে uid
+        createdByName: currentUser.name || '',
+        createdByEmail: currentUser.email || '',
         createdAt: orderData.createdAt
       })
     }).catch(err => console.error('Sheet logging failed:', err));
