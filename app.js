@@ -2084,7 +2084,13 @@ document.getElementById('btnSubmitOrder').addEventListener('click', async () => 
 });
 
 async function submitOrder() {
+  console.log('🚀 submitOrder called');
   const customer = window.selectedCustomer;
+  if (!customer) {
+    alert('কাস্টমার সিলেক্ট করা হয়নি।');
+    return;
+  }
+
   const orderData = {
     customerCode: customer.custCode,
     customerName: customer.custName,
@@ -2101,42 +2107,49 @@ async function submitOrder() {
   };
 
   try {
+    console.log('📦 Saving to Firebase...');
     const ordersRef = ref(database, 'orders');
-    const newOrderRef = push(ordersRef);      // নতুন রেফারেন্স তৈরি
-    const orderId = newOrderRef.key;          // Firebase auto-generated ID
-    await set(newOrderRef, orderData);        // ডাটা সেভ
+    const newOrderRef = push(ordersRef);
+    const orderId = newOrderRef.key;
+    console.log('🆔 Generated Order ID:', orderId);
+    await set(newOrderRef, orderData);
+    console.log('✅ Firebase save successful');
 
-    // ---------- Google Sheet-এ অর্ডার পাঠানোর আগে কনসোলে ডাটা দেখাও ----------
-    console.log('Sending to sheet:', {
-      createdByEnroll: currentUser.enroll,
-      createdByName: currentUser.name,
-      createdByEmail: currentUser.email
-    });
+    // Sheet-এ পাঠানোর ডাটা তৈরি
+    const sheetPayload = {
+      type: "ORDER_LOG",
+      orderId: orderId,
+      customerCode: customer.custCode,
+      customerName: customer.custName,
+      warehouse: customer.warehouse,
+      region: customer.region,
+      area: customer.area,
+      unit: customer.unitShortCode || '',
+      line: customer.line,
+      items: draftItems,
+      total: orderData.total,
+      createdByEnroll: currentUser.enroll || currentUser.uid || '',
+      createdByName: currentUser.name || '',
+      createdByEmail: currentUser.email || '',
+      createdAt: orderData.createdAt
+    };
+    console.log('📤 Sending to Sheet:', sheetPayload);
 
-    // ---------- Google Sheet-এ অর্ডার পাঠানো ----------
-    fetch(appsScriptURL, {   // OTP-র জন্য যে URL আছে (তোমার appsScriptURL ভ্যারিয়েবল), সেটাই
+    // Sheet-এ পাঠানো
+    fetch(appsScriptURL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "ORDER_LOG",
-        orderId: orderId,
-        customerCode: customer.custCode,
-        customerName: customer.custName,
-        warehouse: customer.warehouse,
-        region: customer.region,
-        area: customer.area,
-        unit: customer.unitShortCode || '',
-        line: customer.line,
-        items: draftItems,
-        total: orderData.total,
-        createdByEnroll: currentUser.enroll || currentUser.uid || '',   // ✅ enroll না থাকলে uid
-        createdByName: currentUser.name || '',
-        createdByEmail: currentUser.email || '',
-        createdAt: orderData.createdAt
-      })
-    }).catch(err => console.error('Sheet logging failed:', err));
+      body: JSON.stringify(sheetPayload)
+    })
+    .then(() => {
+      console.log('✅ Sheet fetch completed (no-cors – check Sheet manually)');
+    })
+    .catch(err => {
+      console.error('❌ Sheet logging failed:', err);
+    });
 
+    // UI রিসেট
     alert('অর্ডার সাবমিট হয়েছে।');
     draftItems = [];
     renderDraftTable();
@@ -2147,9 +2160,11 @@ async function submitOrder() {
     document.getElementById('orderCustomerCode').value = '';
     document.getElementById('orderItemSearch').value = '';
   } catch (err) {
+    console.error('❌ Order submission error:', err);
     alert('অর্ডার সাবমিট ব্যর্থ: ' + err.message);
   }
 }
+
 
 function loadMyOrders() {
   const container = document.getElementById('myOrdersContainer');
