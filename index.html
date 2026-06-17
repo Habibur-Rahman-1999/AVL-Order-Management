@@ -177,6 +177,7 @@
                     <p><strong>এলাকা:</strong> <span id="custArea"></span></p>
                     <p><strong>ইউনিট:</strong> <span id="custUnit"></span></p>
                     <p><strong>লাইন:</strong> <span id="custLine"></span></p>
+		    <p><strong>বর্তমান ব্যালেন্স:</strong> <span id="custBalance" style="font-weight:bold; color:#1e3c7
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
@@ -501,6 +502,19 @@
             </div>
         </div>
     </div>
+
+    <!-- Order Confirm Modal -->
+    <div id="orderConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:100;">
+        <div style="background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; text-align:center;">
+            <h3 style="color:#e53e3e;">সতর্কতা</h3>
+            <p id="orderConfirmMsg"></p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                <button id="btnConfirmYes" class="btn btn-danger" style="width:auto; padding:10px 30px;">হ্যাঁ, সাবমিট করি</button>
+                <button id="btnConfirmNo" class="btn btn-primary" style="width:auto; padding:10px 30px;">না, সাবমিট করব না</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Order Details Modal -->
     <div id="orderDetailsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:100;">
         <div style="background:#fff; padding:25px; border-radius:12px; width:90%; max-width:800px; max-height:90vh; overflow-y:auto;">

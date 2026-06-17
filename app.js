@@ -1850,6 +1850,9 @@ custInput.addEventListener('input', () => {
         document.getElementById('custArea').textContent = customer.area;
         document.getElementById('custUnit').textContent = customer.unitShortCode || '';
         document.getElementById('custLine').textContent = customer.line;
+	// ব্যালেন্স দেখাও
+	const balance = getCustomerBalance(customer.custCode);
+	document.getElementById('custBalance').textContent = balance !== null ? balance : 'তথ্য নেই';
         document.getElementById('customerInfo').style.display = 'block';
         window.selectedCustomer = customer;
         custInput.value = customer.custCode;
@@ -2049,20 +2052,55 @@ document.getElementById('btnSubmitOrder').addEventListener('click', async () => 
     alert('ড্রাফট অর্ডার খালি।');
     return;
   }
+
+  const orderTotal = draftItems.reduce((sum, di) => sum + di.quantity * di.price, 0);
+  const customer = window.selectedCustomer;
+  const balance = getCustomerBalance(customer.custCode);
+
+  // ব্যালেন্স চেক: Usable Balance সাধারণত নেগেটিভ হলে বকেয়া আছে বোঝায়।
+  // "-2408" মানে 2408 টাকা পর্যন্ত অর্ডার দেওয়া যাবে (বকেয়ার সীমা)।
+  // তাই, balance যদি ঋণাত্মক হয় এবং orderTotal > Math.abs(balance) হয়, তাহলে কনফার্মেশন চাইবে।
+  if (balance !== null && balance < 0 && orderTotal > Math.abs(balance)) {
+    // কনফার্মেশন দেখাও
+    document.getElementById('orderConfirmMsg').innerHTML = `
+      আপনার মোট অর্ডার মূল্য <strong>${orderTotal.toFixed(2)}</strong> টাকা,<br>
+      যা বর্তমান ব্যালেন্সের সীমা <strong>${Math.abs(balance).toFixed(2)}</strong> টাকা থেকে বেশি।<br>
+      আপনি কি তবুও অর্ডারটি সাবমিট করতে চান?
+    `;
+    document.getElementById('orderConfirmModal').style.display = 'flex';
+
+    // হ্যাঁ/না বাটনের ইভেন্ট (একবারই অ্যাটাচ হবে, তাই সরাসরি onclick ব্যবহার করি)
+    document.getElementById('btnConfirmYes').onclick = () => {
+      document.getElementById('orderConfirmModal').style.display = 'none';
+      submitOrder();  // অর্ডার সাবমিট
+    };
+    document.getElementById('btnConfirmNo').onclick = () => {
+      document.getElementById('orderConfirmModal').style.display = 'none';
+      // কিছু করবে না
+    };
+  } else {
+    // ব্যালেন্স ঠিক আছে বা ব্যালেন্স নেই, সরাসরি সাবমিট
+    submitOrder();
+  }
+});
+
+async function submitOrder() {
+  const customer = window.selectedCustomer;
   const orderData = {
-    customerCode: window.selectedCustomer.custCode,
-    customerName: window.selectedCustomer.custName,
-    warehouse: window.selectedCustomer.warehouse,
-    region: window.selectedCustomer.region,
-    area: window.selectedCustomer.area,
-    unit: window.selectedCustomer.unitShortCode || '',
-    line: window.selectedCustomer.line,
+    customerCode: customer.custCode,
+    customerName: customer.custName,
+    warehouse: customer.warehouse,
+    region: customer.region,
+    area: customer.area,
+    unit: customer.unitShortCode || '',
+    line: customer.line,
     items: draftItems,
     total: draftItems.reduce((sum, di) => sum + di.quantity * di.price, 0),
     createdBy: currentUser.uid,
     createdByName: currentUser.name,
     createdAt: new Date().toISOString()
   };
+
   try {
     const ordersRef = ref(database, 'orders');
     await push(ordersRef, orderData);
@@ -2078,7 +2116,7 @@ document.getElementById('btnSubmitOrder').addEventListener('click', async () => 
   } catch (err) {
     alert('অর্ডার সাবমিট ব্যর্থ: ' + err.message);
   }
-});
+}
 
 function loadMyOrders() {
   const container = document.getElementById('myOrdersContainer');
@@ -2468,4 +2506,21 @@ document.getElementById('balanceFileInput').addEventListener('change', (e) => {
     }
   };
   reader.readAsArrayBuffer(file);
+});
+
+function getCustomerBalance(custCode) {
+  if (!allBalanceDataCache || !Array.isArray(allBalanceDataCache)) return null;
+  const row = allBalanceDataCache.find(r => String(r['Customer Code']) === String(custCode));
+  if (row && row['Usable Balance'] !== undefined) {
+    return parseFloat(row['Usable Balance']) || 0;
+  }
+  return null;
+}
+
+// Order Confirm Modal close on outside click
+window.addEventListener('click', (e) => {
+  const modal = document.getElementById('orderConfirmModal');
+  if (e.target === modal) {
+    modal.style.display = 'none';
+  }
 });
